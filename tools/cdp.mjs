@@ -78,10 +78,17 @@ export async function launch ({ profile, port = 9333, width = 1300, height = 900
   listeners.add(({ method, params }) => {
     if (method === 'Runtime.consoleAPICalled') consoleLines.push(`${params.type}: ${params.args.map(a => a.value ?? a.description ?? '').join(' ')}`)
     if (method === 'Runtime.exceptionThrown') consoleLines.push(`exception: ${params.exceptionDetails.exception?.description ?? params.exceptionDetails.text}`)
+    // alert/confirm/prompt would block the page (and every evaluate): log and dismiss.
+    if (method === 'Page.javascriptDialogOpening') {
+      consoleLines.push(`dialog: ${params.type}: ${params.message}`)
+      send('Page.handleJavaScriptDialog', { accept: params.type !== 'beforeunload' }).catch(() => {})
+    }
   })
 
   await send('Page.enable')
   await send('Runtime.enable')
+  // A headless tab never has focus, so focus/blur events wouldn't fire; emulate it.
+  await send('Emulation.setFocusEmulationEnabled', { enabled: true })
 
   const evaluate = async (fn, ...args) => {
     const expression = typeof fn === 'function' ? `(${fn})(...${JSON.stringify(args)})` : fn

@@ -13,6 +13,16 @@ python3 -m http.server 8731   # any static server
 - `demo/load-each.html?dir=…` — imports every module under a directory on its own and names the ones that fail (needs a server with directory listings, like `python3 -m http.server`).
 - `legacy.html` — the legacy library. Runs 16 behaviour checks (buttons, the legacy form renderer, tabs, CodeEditor, loginStatusBox, ACLs, chat signatures, header/footer, camera button); `?load` imports all 85 modules and checks `src/solid-ui.js` exports the same 45 names as upstream's published `dist/index.esm.js`.
 
+## Tests
+
+```sh
+python3 -m http.server 8731 &           # in this directory
+node tests/run-all.mjs                  # every page check, module loads, the shell on the public test pod
+node tests/run-all.mjs --pod            # … plus login, editing and creating on a local JSS pod (below)
+```
+
+`tools/cdp.mjs` drives headless Chromium over the DevTools protocol (no npm dependencies); `tests/shell.mjs` and `tests/pod.mjs` use it. Failures with a confirmed external cause print as `KNOWN` with the reason (see "Upstream findings").
+
 ## Using it
 
 ```html
@@ -47,6 +57,8 @@ import { Combobox } from 'solid-ui/components/combobox'
 Component CSS files are byte-for-byte upstream, except `src/lib/WebComponent.styles.css`, which is upstream's *built* output: their build resets margin/padding on a list of HTML elements instead of `*`, and the raw Tailwind preflight breaks nested components.
 
 ## Deviations from upstream
+
+- Atkinson Hyperlegible Next is self-hosted (`src/fonts/`, SIL OFL) instead of loaded from Google Fonts, so pages make no requests to Google.
 
 - `src/index.js` attaches a `ContextRoot`, so a consumer that connects before its provider still gets the context. Upstream relies on registration order, which top-level-await stylesheets can't guarantee.
 - `rdf-form`: parts are looked up in the form *document*, so a `formUrl` with a fragment works. Upstream uses the full URL as the graph and renders an empty form (upstream bug).
@@ -109,6 +121,40 @@ More that the shell needed:
 - **mashlib** (v3.0.0, 4 files): the shell. One recorded patch: `window.panes` is a copy of the solid-panes namespace, because a real module namespace is sealed (webpack's isn't) and `runDataBrowser` is added to it.
 - **profile-pane** (v4.0.0, 94 files, ~15,000 lines): renders the real test profile (`testingsolidos.solidcommunity.net`) in both layouts; `pane.html?pane=profile-pane&smoke` runs 7 checks. 175 type-only names dropped, all files in strip mode. Panes rely on the host page for `.sr-only` (mashlib's `mash-utilities.css`); the sandbox provides it.
 
-### Panes still loaded as published builds
+- **folder-pane, source-pane, chat-pane, contacts-pane** (v4.0.0, Vite + TypeScript) and **issue-pane, meeting-pane** (v4.0.0, webpack + babel): converted with the same tool (`tools/<pane>.json`). The webpack ones import Turtle through `babel-plugin-inline-import` (`import { formText } from './form.ttl'`) and `require('./x.ttl')` inline; both become fetched text.
 
-solid-panes registers seven more panes: chat, contacts, folder, source, issue, meeting and activitystreams. Until each is converted like profile-pane, `src/importmap.js` loads its published build from esm.sh with every dependency external (`*` prefix), so `solid-ui`, `rdflib`, `lit`, … resolve to the single copies mapped here. That covers the webpack CommonJS builds too (issue-pane, meeting-pane), which `require("SolidLogic")`/`require("UI")` by global name, mapped as such. activitystreams-pane brings React 19, also mapped once. `pane-registry` is CommonJS that builds its exports at runtime, so `src/vendor/pane-registry.js` re-exports its named members over the CDN build.
+### Published builds, for A/B
+
+Only **activitystreams-pane** (React) still loads as a published build: `src/importmap.js` maps it to esm.sh with every dependency external (`*` prefix), so `solid-ui`, `rdflib`, `lit`, … resolve to the single copies mapped here, and React 19 is mapped once. `pane-registry` is CommonJS that builds its exports at runtime, so `src/vendor/pane-registry.js` re-exports its named members.
+
+`?published=issue-pane,contacts-pane` on any page swaps those panes back to their published npm builds. That is how each upstream finding below was checked: same behaviour with upstream's own build means it is not the conversion.
+
+## Running on a pod
+
+[JSS](https://jss.live) serves an ES-module data browser with `--mashlib-module <url>`: for every resource a browser navigates to it returns a bare page that loads that module. `mashlib/boot.js` is that module; it adds the importmap and the `databrowser.html` markup and starts mashlib. Put this tree in the pod and SolidOS is served by the pod it browses:
+
+```sh
+jss start --port 8732 --host 127.0.0.1 --root ./jss-data --idp --conneg \
+  --single-user --single-user-name me --single-user-password "$PW" \
+  --mashlib-module http://127.0.0.1:8732/me/public/solidos/mashlib/boot.js
+ln -s "$PWD/nobuild" jss-data/me/public/solidos     # JSS follows symlinked folders: edit, reload
+```
+
+- `--single-user-name me` puts the pod at `/me/`. At the server root, JSS's landing `index.html` is the folder's representation, so `/` can't be browsed as a folder.
+- Use `127.0.0.1`, not `localhost`: the IdP's issuer is the address JSS binds to.
+- `tests/pod.mjs` logs in through the IdP (skipping the passkey offer, allowing consent), edits the profile bio and checks `card.jsonld` on disk, mints a tracker, address book, notepad, meeting, long chat, chat and schedule and opens each, and sends a chat message and checks it is written.
+
+## Upstream findings
+
+Found while converting and testing; each reproduced with upstream's own code or build.
+
+| Where | What | Status |
+|---|---|---|
+| solid-ui 5.0.1 `rdf-form` | With a `formUrl` that has a `#fragment` (which `findForm` supports), parts are looked up in a graph named by the full URL, so the form renders empty | Fixed here; patch ready (`../solid-ui-rdf-form-fragment.patch`) |
+| issue-pane 4.0.0 | A tracker it has just minted shows "Tracker settings need an update": `fixSubClasses` looks for `wf:Task`'s `owl:disjointUnionOf` in the tracker's document, but it is only in the workflow ontology | Same with the published build |
+| JSS 0.0.212 + SolidOS | JSS accepts ACL documents only as JSON-LD (415 for Turtle); SolidOS writes ACLs as Turtle (long chat, address book, schedule, the sharing editor) | Server-side; address book and schedule creation stop there |
+| profile-pane 4.0.0 | `SocialData: SocialPresentation` is literal text inside the social card's markup (a type annotation pasted into a template) | Harmless |
+| pane-registry 5.0.1 | Published as CommonJS that assigns its exports at runtime, so ESM consumers (and CDNs) can't get named exports | Shimmed here |
+| solid-ui 5.0.1 (built CSS) | The Tailwind reset in every component's `:host` sets `font-family: ui-sans-serif, …`, overriding the theme's Atkinson Hyperlegible for everything inside a component, panes included (they render in solid-panes' file-explorer component) | Same with upstream's build; reproduced faithfully |
+| solid-panes 5.0.0 | `argument/argumentPane.js` uses `module.__dirname`; dead code (commented out in `registerPanes.js`) | Left as is |
+

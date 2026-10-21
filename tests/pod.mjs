@@ -6,6 +6,7 @@
 // profile lives in .chrome-profile/ so the session can be reused between steps.
 
 import { readFileSync, rmSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { launch } from '../tools/cdp.mjs'
 
@@ -16,10 +17,19 @@ const PROFILE_DIR = fileURLToPath(new URL('../.chrome-profile/', import.meta.url
 const SHOTS = fileURLToPath(new URL('../.shots/', import.meta.url))
 const only = process.argv.slice(2)
 
+// Failures with a confirmed cause outside this conversion: reported as KNOWN, not
+// counted. Each was reproduced with upstream's published builds or traced to the server.
+const KNOWN = [
+  [/415 \(Unsupported Media Type\)|Error setting access permissions/, 'JSS accepts ACLs only as JSON-LD; SolidOS writes them as Turtle'],
+  [/has no disjointUnionOf|missing its allowed state list/, 'issue-pane 4.0.0: a newly minted tracker lacks wf:Task states (same with the published build)'],
+]
+
 let failures = 0
 const check = (name, ok, detail = '') => {
-  if (!ok) failures++
-  console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${detail ? ` (${detail})` : ''}`)
+  const known = !ok && KNOWN.find(([re]) => re.test(detail))
+
+  if (!ok && !known) failures++
+  console.log(`${ok ? 'PASS' : known ? 'KNOWN' : 'FAIL'} ${name}${detail ? ` (${detail})` : ''}${known ? `\n      → ${known[1]}` : ''}`)
 }
 
 // Search through open shadow roots: deep('solid-ui-account') etc.
@@ -101,7 +111,8 @@ tests.editBio = async (page) => {
 
   await page.goto(WEBID)
   await page.waitFor(`!!(${DEEP})('solid-ui-account')?.hasAttribute('data-state-loggedin')`, { timeout: 30000 })
-  await page.waitFor(`(${CLICK_TEXT})('Add Bio') || (${CLICK_TEXT})('Edit Bio')`, { timeout: 30000 })
+  // "Add Bio" on an empty profile; the section's "Edit bio" button once one exists.
+  await page.waitFor(`(${CLICK_TEXT})('Add Bio') || (() => { const b = (${DEEP})('[aria-label="Edit bio"]'); if (!b) return false; (b.shadowRoot?.querySelector('button') ?? b).click(); return true })()`, { timeout: 30000 })
   await page.waitFor(`!!(${DEEP})('.profile-edit-dialog__textarea')`)
   check('Add Bio opens the bio dialog', true)
 
@@ -129,6 +140,128 @@ tests.editBio = async (page) => {
 
 // The login test starts from a clean, logged-out browser profile.
 if (!only.length || only.includes('login')) rmSync(PROFILE_DIR, { recursive: true, force: true })
+
+// Panes that mint new resources, as solid-ui's create menu does (create/create.js:
+// options newBase, folder, pane, noun, noIndexHTML, div, me, dom). folder and source
+// prompt for a name with window.prompt, which would block a headless page.
+const MINTABLE = ['issue', 'contact', 'pad', 'meeting', 'long chat', 'chat', 'schedule']
+
+tests.create = async (page) => {
+  const stamp = Date.now()
+
+  await page.goto(WEBID)
+  await page.waitFor(`!!(${DEEP})('solid-ui-account')?.hasAttribute('data-state-loggedin')`, { timeout: 30000 })
+  await page.waitFor(() => !!window.panes?.getOutliner?.(document)?.context, { timeout: 30000 })
+
+  const created = await page.evaluate(async (pod, webId, names, stamp) => {
+    const { solidLogicSingleton, store } = await import('solid-logic')
+    const outliner = window.panes.getOutliner(document)
+    const context = outliner.context
+    const registry = context.session.paneRegistry
+    const results = {}
+
+    for (const name of names) {
+      const pane = registry.byName(name)
+      const slug = name.replace(/\W+/g, '-')
+      const newBase = `${pod}public/created/${slug}-${stamp}/`
+
+      try {
+        const options = await Promise.race([
+          pane.mintNew(context, {
+            newBase,
+            folder: store.sym(`${pod}public/created/`),
+            pane,
+            noun: name,
+            noIndexHTML: true,
+            div: document.createElement('div'),
+            me: store.sym(webId),
+            dom: document,
+          }),
+          new Promise((resolve, reject) => setTimeout(() => reject(new Error('mintNew timed out')), 20000)),
+        ])
+        const instance = options?.newInstance
+
+        if (!instance) throw new Error('no newInstance')
+
+        // Read it back through the authenticated fetcher, fresh from the server.
+        await store.fetcher.load(instance.doc(), { force: true })
+        results[name] = { ok: true, uri: instance.uri, triples: store.statementsMatching(null, null, null, instance.doc()).length }
+      } catch (error) {
+        results[name] = { ok: false, error: String(error?.message ?? error).slice(0, 200) }
+      }
+    }
+
+    return results
+  }, POD, WEBID, MINTABLE, stamp)
+
+  for (const [name, result] of Object.entries(created)) {
+    check(`mintNew ${name}`, result.ok, result.ok ? `${result.uri.replace(POD, '/me/')} (${result.triples} triples)` : result.error)
+  }
+
+  // Open each new resource in the shell, as a user following the link would.
+  for (const [name, result] of Object.entries(created)) {
+    if (!result.ok) continue
+
+    const before = page.console.length
+
+    await page.goto(result.uri)
+    try {
+      // Rendered: text, or an interactive control (a new chat is just a message box).
+      await page.waitFor(`(() => { const o = document.getElementById('OutlineView'); return !!o && (o.innerText.trim().length > 20 || !!o.querySelector('textarea, input, table, solid-ui-button')) })()`, { timeout: 30000 })
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      const errors = page.console.slice(before).filter(l => /^(exception|error)/.test(l) && !/preferences|container representation|Failed to load resource/.test(l))
+
+      check(`open new ${name}: renders, no uncaught errors`, errors.length === 0, errors.slice(0, 2).join(' | ').slice(0, 300))
+      await page.screenshot(`${SHOTS}pod-new-${name.replace(/\W+/g, '-')}.png`)
+    } catch (error) {
+      check(`open new ${name}: ${error.message}`, false)
+    }
+  }
+}
+
+tests.chatMessage = async (page) => {
+  const message = `Hello from the no-build SolidOS test, ${new Date().toISOString()}`
+  await page.goto(WEBID)
+  await page.waitFor(`!!(${DEEP})('solid-ui-account')?.hasAttribute('data-state-loggedin')`, { timeout: 30000 })
+  await page.waitFor(() => !!window.panes?.getOutliner?.(document)?.context, { timeout: 30000 })
+
+  const chat = await page.evaluate(async (pod, webId) => {
+    const { store } = await import('solid-logic')
+    const context = window.panes.getOutliner(document).context
+    const pane = context.session.paneRegistry.byName('chat')
+    const options = await pane.mintNew(context, { newBase: `${pod}public/created/chat-msg-${Date.now()}/`, pane, noun: 'chat', noIndexHTML: true, div: document.createElement('div'), me: store.sym(webId), dom: document })
+
+    return options?.newInstance?.uri ?? null
+  }, POD, WEBID)
+
+  if (!chat) throw new Error('could not create a chat to post into')
+
+  await page.goto(chat)
+  await page.waitFor(() => !!document.querySelector('#OutlineView textarea'), { timeout: 30000 })
+  await page.evaluate(() => document.querySelector('#OutlineView textarea').focus())
+  await page.type(message)
+  await page.evaluate(() => {
+    const send = [...document.querySelectorAll('#OutlineView button')].find(b => b.title === 'Send' || /send/i.test(b.getAttribute('aria-label') ?? '') || b.querySelector('img[title="Send"], img[alt="Send"]'))
+    send ? send.click() : document.querySelector('#OutlineView textarea').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+  })
+
+  const dir = `${DATA}${chat.replace(POD, '').replace(/index\.ttl#this$/, '')}`
+  const written = await (async () => {
+    for (let i = 0; i < 40; i++) {
+      const out = spawnSync('grep', ['-rl', message, dir], { encoding: 'utf8' }).stdout.trim()
+      if (out) return out
+      await new Promise(resolve => setTimeout(resolve, 250))
+    }
+    return null
+  })()
+
+  check('chat: a message typed and sent is written to the pod', !!written, written ? written.replace(DATA, '/me/') : 'not found on disk')
+
+  await page.goto(chat)
+  await page.waitFor(`document.getElementById('OutlineView')?.innerText.includes(${JSON.stringify(message)})`, { timeout: 30000 })
+  check('chat: after reload the message is shown', true)
+  await page.screenshot(`${SHOTS}pod-chat-message.png`)
+}
 
 const page = await launch({ profile: PROFILE_DIR })
 

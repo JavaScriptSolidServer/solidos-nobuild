@@ -1,0 +1,10 @@
+/* Shared utility variables for component styles.
+   These are kept here (instead of in dev-global.css) so they can be
+   bundled with component styles and reused consistently across the app.
+*/
+
+/* Utility helper classes */
+
+/* different from mashlib .btn-primary:active {
+  box-shadow: var(--box-shadow-active);
+} */

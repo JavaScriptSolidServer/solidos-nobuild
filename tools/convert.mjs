@@ -11,7 +11,8 @@
 // - Import specifiers become explicit relative URLs with .js (`@/x` alias too).
 //   Bare specifiers (rdflib, solid-ui, …) are left for src/importmap.js.
 // - `import './x.css'` (Vite injects these into <head>) → importCss(); `import x
-//   from './x.ttl'` (raw text) → fetch(); `import x from './x.png'` → its URL.
+//   from './x.ttl'` (raw text) → fetch(); `import x from './x.png'` → its URL;
+//   inline `require('./x.ttl')` (webpack raw loader) → a fetched constant.
 //   CSS, TTL and imported image files are copied as they are.
 // - Type-only names imported without `import type` are dropped (second pass).
 //
@@ -560,9 +561,31 @@ for (const file of files) {
       return `const ${name} = new URL(${q}${spec}${q}, import.meta.url).href`
     })
 
+  // require('./x.ttl') used inline (webpack raw loader) → a constant fetched at
+  // the top of the module.
+  const hoisted = []
+
+  code = code.replace(/\brequire\(\s*(['"])(\.[^'"]+\.(?:ttl|n3|txt))\1\s*\)/g, (m, q, spec) => {
+    const name = `__${spec.replace(/^.*\//, '').replace(/\W/g, '_')}`
+
+    if (!hoisted.some(h => h.name === name)) hoisted.push({ name, spec, q })
+
+    return name
+  })
+
+  if (hoisted.length) {
+    const lines = hoisted.map(({ name, spec, q }) => `const ${name} = await (await fetch(new URL(${q}${spec}${q}, import.meta.url))).text()`)
+    const lastImport = [...code.matchAll(/^import[^\n]*\n/gm)].pop()
+    const at = lastImport ? lastImport.index + lastImport[0].length : 0
+
+    code = code.slice(0, at) + lines.join('\n') + '\n' + code.slice(at)
+  }
+
   // import x from './x.ttl' → the file's text (Vite's raw plugin).
-  code = code.replace(/^import\s+([\w$]+)\s+from\s*(['"])(\.[^'"]+\.ttl)\2;?[ \t]*$/gm,
-    (m, name, q, spec) => `const ${name} = await (await fetch(new URL(${q}${spec}${q}, import.meta.url))).text()`)
+  // Also `import { x } from './x.ttl'`: babel-plugin-inline-import binds the text
+  // to whatever name the import declares.
+  code = code.replace(/^import\s+(?:([\w$]+)|\{\s*([\w$]+)\s*\})\s+from\s*(['"])(\.[^'"]+\.ttl)\3;?[ \t]*$/gm,
+    (m, name, named, q, spec) => `const ${name ?? named} = await (await fetch(new URL(${q}${spec}${q}, import.meta.url))).text()`)
 
   // import … from 'x' | export … from 'x' | import 'x' | import('x')
   code = code.replace(/(\bfrom\s*|\bimport\s*\(?\s*)(['"])([^'"\n]+)\2/g,

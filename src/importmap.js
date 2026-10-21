@@ -10,6 +10,15 @@ const components = ['account', 'avatar', 'button', 'combobox', 'combobox-option'
   'login-modal', 'logout-button', 'menu', 'menu-item', 'photo-capture', 'photo-capture-modal', 'provider',
   'rdf-form', 'rdf-input', 'select', 'select-option', 'signup-button', 'solid-emblem']
 
+// A/B against upstream: ?published=issue-pane,contacts-pane maps those panes to
+// their published npm builds (esm.sh, dependencies external) instead of the
+// converted source here.
+const PUBLISHED = {
+  'profile-pane': '4.0.0', 'folder-pane': '4.0.0', 'source-pane': '4.0.0', 'chat-pane': '4.0.0',
+  'contacts-pane': '4.0.0', 'issue-pane': '4.0.0', 'meeting-pane': '4.0.0', 'activitystreams-pane': '2.0.0',
+}
+const published = (new URL(location.href).searchParams.get('published') ?? '').split(',').filter(p => PUBLISHED[p])
+
 script.type = 'importmap'
 script.textContent = JSON.stringify({
   imports: {
@@ -22,19 +31,20 @@ script.textContent = JSON.stringify({
     'solid-panes': here('../panes/solid-panes/src/index.js'),
     'profile-pane': here('../panes/profile-pane/src/index.js'),
 
-    // Panes not converted yet: their published builds via esm.sh with every
-    // dependency external (* prefix), so solid-ui, rdflib, lit, … resolve to the
-    // single copies mapped here. (issue-pane and meeting-pane publish CommonJS;
-    // esm.sh turns it into ESM.) Versions as locked by solid-panes 5.0.0.
-    'chat-pane': 'https://esm.sh/*chat-pane@4.0.0',
-    'contacts-pane': 'https://esm.sh/*contacts-pane@4.0.0',
-    'folder-pane': 'https://esm.sh/*folder-pane@4.0.0',
-    'source-pane': 'https://esm.sh/*source-pane@4.0.0',
-    'issue-pane': 'https://esm.sh/*issue-pane@4.0.0',
-    'meeting-pane': 'https://esm.sh/*meeting-pane@4.0.0',
+    'folder-pane': here('../panes/folder-pane/src/index.js'),
+    'source-pane': here('../panes/source-pane/src/index.js'),
+    'chat-pane': here('../panes/chat-pane/src/index.js'),
+    'contacts-pane': here('../panes/contacts-pane/src/index.js'),
+    'issue-pane': here('../panes/issue-pane/src/issuePane.js'),
+    'meeting-pane': here('../panes/meeting-pane/src/meetingPane.js'),
+
+    // Not converted: activitystreams-pane (React). Its published build via esm.sh
+    // with every dependency external (* prefix), so solid-ui, rdflib, … resolve
+    // to the single copies mapped here.
     'activitystreams-pane': 'https://esm.sh/*activitystreams-pane@2.0.0',
-    // issue-pane and meeting-pane are webpack UMD builds that require their
-    // dependencies by global name: require("SolidLogic"), require("UI").
+    ...Object.fromEntries(published.map(p => [p, `https://esm.sh/*${p}@${PUBLISHED[p]}`])),
+    // Global names the webpack UMD builds of the panes required (require("SolidLogic"),
+    // require("UI")); kept for any published build that still uses them.
     SolidLogic: 'https://cdn.jsdelivr.net/npm/solid-logic@6.0.0/+esm',
     $rdf: 'https://cdn.jsdelivr.net/npm/rdflib@2.4.1/+esm', // mashlib's webpack aliases this too
     UI: here('./solid-ui.js'),
