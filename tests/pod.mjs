@@ -103,7 +103,7 @@ const CLICK_TEXT = `(text) => {
   return true
 }`
 
-const DATA = fileURLToPath(new URL('../../jss-data/me/', import.meta.url))
+const DATA = process.env.POD_DATA ?? fileURLToPath(new URL('../../jss-data/me/', import.meta.url))
 
 tests.editBio = async (page) => {
   const bio = `Written by the no-build SolidOS test at ${new Date().toISOString()}`
