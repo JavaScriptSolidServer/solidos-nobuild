@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>solid-ui nobuild login</title>
+  <script src="src/importmap.js"></script>
+  <link rel="stylesheet" href="src/styles/theme.css">
+  <script type="module">
+    await import('./src/index.js')
+
+    if (location.search.includes('smoke')) import('./demo/login-smoke.js')
+    // ?modal opens the login modal; ?go=<issuer> starts a real login straight away
+    const params = new URLSearchParams(location.search)
+    if (params.has('modal') || params.has('go')) {
+      const auth = document.querySelector('solid-ui-provider').auth
+      const ready = () => auth.initialized ? auth.login(params.get('go') ?? undefined) : setTimeout(ready, 50)
+      ready()
+    }
+  </script>
+  <style>
+    body { margin: 0; }
+    header { display: flex; justify-content: space-between; align-items: center; padding: .75rem 1.5rem; border-bottom: 1px solid #e2e8f0; }
+    main { padding: 1.5rem; max-width: 40rem; }
+    #webid { font-family: monospace; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <solid-ui-provider>
+    <header>
+      <strong>SolidOS, no build</strong>
+      <solid-ui-account></solid-ui-account>
+    </header>
+    <main>
+      <p>Real Solid login: <code>solid-ui-provider</code> → SolidAuth → solid-logic, all from plain files.</p>
+      <p>WebID: <span id="webid">not logged in</span></p>
+    </main>
+  </solid-ui-provider>
+  <script type="module">
+    await customElements.whenDefined('solid-ui-provider')
+    const auth = document.querySelector('solid-ui-provider').auth
+    const show = () => { document.getElementById('webid').textContent = auth.account?.webId ?? 'not logged in' }
+    auth.onSessionUpdated(show)
+    show()
+  </script>
+</body>
+</html>

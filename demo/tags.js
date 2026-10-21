@@ -1,0 +1,5 @@
+const out = document.createElement('pre'); out.id = 'tags'; document.body.append(out)
+await new Promise(r => setTimeout(r, 2000))
+const tags = 'solid-ui-account,solid-ui-avatar,solid-ui-button,solid-ui-combobox,solid-ui-combobox-option,solid-ui-dialog,solid-ui-dialog-content,solid-ui-dialog-footer,solid-ui-dialog-header,solid-ui-dialog-provider,solid-ui-dialogs-root,solid-ui-guard,solid-ui-input,solid-ui-login-button,solid-ui-login-modal,solid-ui-logout-button,solid-ui-menu,solid-ui-menu-item,solid-ui-photo-capture,solid-ui-photo-capture-modal,solid-ui-provider,solid-ui-rdf-form,solid-ui-rdf-input,solid-ui-select,solid-ui-select-option,solid-ui-signup-button,solid-ui-solid-emblem'.split(',')
+const missing = tags.filter(t => !customElements.get(t))
+out.textContent = 'defined ' + (tags.length - missing.length) + '/' + tags.length + (missing.length ? ' missing: ' + missing.join(' ') : '')

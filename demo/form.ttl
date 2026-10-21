@@ -1,0 +1,13 @@
+@prefix ui: <http://www.w3.org/ns/ui#> .
+@prefix vcard: <http://www.w3.org/2006/vcard/ns#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix : <#> .
+
+:form a ui:Form ;
+  ui:parts ( :name :email :nick :birthday :bio ) .
+
+:name a ui:SingleLineTextField ; ui:property vcard:fn ; ui:label "Name" .
+:email a ui:EmailField ; ui:property vcard:hasEmail ; ui:label "Email" .
+:nick a ui:SingleLineTextField ; ui:property foaf:nick .
+:birthday a ui:DateField ; ui:property vcard:bday ; ui:label "Birthday" .
+:bio a ui:MultiLineTextField ; ui:property vcard:note ; ui:label "Bio" .

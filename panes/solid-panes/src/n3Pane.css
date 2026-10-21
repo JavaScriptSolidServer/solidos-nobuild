@@ -1,0 +1,6 @@
+.n3-pane {
+	width: 100%;
+	min-width: 0;
+	border: 1px solid var(--solid-ui-color-slate-200, #E2E8F0);
+	box-sizing: border-box;
+}

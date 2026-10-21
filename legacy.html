@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>solid-ui legacy nobuild</title>
+  <script src="src/importmap.js"></script>
+  <link rel="stylesheet" href="src/styles/theme.css">
+  <style>body { margin: 2rem; max-width: 60rem; } pre { white-space: pre-wrap; } section { border-top: 1px solid #e2e8f0; margin-top: 1.5rem; } h2 { font-size: 1rem; }</style>
+</head>
+<body>
+  <h1>solid-ui legacy code, no build</h1>
+  <p>The legacy library (widgets, utils, lib, acl, chat, header, …), converted by <code>tools/convert.mjs</code>. <code>?smoke</code> calls the main entry points; <code>?load</code> imports every module.</p>
+  <pre id="load"></pre>
+  <pre id="smoke"></pre>
+  <div id="stage"></div>
+  <script type="module">
+    if (location.search.includes('load')) await import('./demo/legacy-load.js')
+    await import('./demo/legacy-smoke.js')
+  </script>
+</body>
+</html>

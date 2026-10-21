@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Load each module</title>
+  <script src="../src/importmap.js"></script>
+  <style>body { margin: 2rem; font-family: sans-serif; } pre { white-space: pre-wrap; }</style>
+</head>
+<body>
+  <h1>Load each module</h1>
+  <p><code>?dir=panes/profile-pane/src</code> imports every .js file under that directory on its own and reports failures. Needs a server with directory listings (python3 -m http.server).</p>
+  <pre id="out"></pre>
+  <script type="module">
+    const out = document.getElementById('out')
+    const dir = new URL(location.href).searchParams.get('dir') ?? 'panes/profile-pane/src'
+    const root = new URL(`../${dir.replace(/\/?$/, '/')}`, location.href)
+
+    async function list (url) {
+      const html = await (await fetch(url)).text()
+      const hrefs = [...html.matchAll(/href="([^"?#]+)"/g)].map(m => decodeURIComponent(m[1]))
+      const files = []
+
+      for (const href of hrefs) {
+        if (href.startsWith('/') || href.startsWith('..')) continue
+        if (href.endsWith('/')) files.push(...await list(new URL(href, url)))
+        else if (href.endsWith('.js') && href !== 'importmap.js') files.push(new URL(href, url).href) // importmap.js is a classic script
+      }
+
+      return files
+    }
+
+    const files = await list(root)
+    let ok = 0
+
+    for (const file of files) {
+      try {
+        await import(file)
+        ok++
+      } catch (error) {
+        out.textContent += `FAIL ${file.slice(root.href.length)}: ${error.message}\n`
+      }
+    }
+
+    out.textContent += `loaded ${ok}/${files.length}\nDONE\n`
+  </script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>solid-ui nobuild</title>
+  <script src="src/importmap.js"></script>
+  <link rel="stylesheet" href="src/styles/theme.css">
+  <script type="module">
+    // Demo providers first; src/index.js attaches a ContextRoot so order no longer matters.
+    await import('./demo/mock-auth.js')
+    await import('./demo/demo-store.js')
+    await import('./src/index.js')
+
+    const menuItems = [
+      { label: 'Your profile', selected: true, onSelected: () => console.log('[demo] profile') },
+      { label: 'Solid project', href: 'https://solidproject.org/' },
+    ]
+
+    document.querySelectorAll('solid-ui-account').forEach(el => { el.menuItems = menuItems })
+
+    const rdf = document.getElementById('rdf')
+    rdf.setAttribute('formUrl', new URL('demo/form.ttl#form', location.href))
+    rdf.setAttribute('subjectUrl', new URL('demo/alice.ttl#me', location.href))
+
+    if (location.search.includes('smoke')) import('./demo/smoke.js')
+    if (location.search.includes('tags')) import('./demo/tags.js')
+    if (location.search.includes('menu')) setTimeout(() => document.querySelector('#alice solid-ui-account').shadowRoot.querySelector('button[slot="trigger"]').click(), 300)
+  </script>
+  <style>
+    body { margin: 2rem; display: grid; gap: 1.5rem; max-width: 52rem; }
+    h2 { font-size: 1.1rem; margin: 1rem 0 0; }
+    .row { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+    .states { display: grid; grid-template-columns: 9rem 1fr; gap: 1rem; align-items: center; }
+    .states span { color: #666; font-size: .9rem; }
+    solid-ui-avatar { --size: 64px; border-radius: 50%; }
+  </style>
+</head>
+<body>
+  <h1>solid-ui, no build</h1>
+  <p>Edit a file in <code>src/</code>, reload. No Vite, no TypeScript compiler, no plugins.</p>
+
+  <h2>Button</h2>
+  <div class="row">
+    <solid-ui-button>Primary</solid-ui-button>
+    <solid-ui-button variant="secondary">Secondary</solid-ui-button>
+    <solid-ui-button variant="tertiary">Tertiary</solid-ui-button>
+    <solid-ui-button variant="outline">Outline</solid-ui-button>
+    <solid-ui-button variant="ghost">Ghost</solid-ui-button>
+    <solid-ui-button loading>Loading</solid-ui-button>
+    <solid-ui-button disabled>Disabled</solid-ui-button>
+  </div>
+  <form class="row" onsubmit="event.preventDefault(); this.querySelector('output').value = 'submitted ' + new Date().toLocaleTimeString()">
+    <input name="q" value="form-associated">
+    <solid-ui-button id="submit" type="submit">Submit</solid-ui-button>
+    <output></output>
+  </form>
+
+  <h2>Input, Select, Combobox</h2>
+  <form id="fields" class="row" style="align-items:flex-end">
+    <solid-ui-input name="name" label="Name" placeholder="Your name"></solid-ui-input>
+    <solid-ui-select name="colour" label="Colour">
+      <solid-ui-select-option value="purple">Purple</solid-ui-select-option>
+      <solid-ui-select-option value="navy">Navy</solid-ui-select-option>
+    </solid-ui-select>
+    <solid-ui-combobox name="pod" label="Pod provider">
+      <solid-ui-combobox-option value="https://solidcommunity.net">Solid Community</solid-ui-combobox-option>
+      <solid-ui-combobox-option value="https://solidweb.org">Solid Web</solid-ui-combobox-option>
+    </solid-ui-combobox>
+    <solid-ui-input name="ro" label="Read only" value="can't touch this" readonly></solid-ui-input>
+  </form>
+
+  <h2>Guard, Solid emblem, Photo capture</h2>
+  <div class="row">
+    <demo-auth state="out"><solid-ui-guard id="guard-out"><span slot="guest">guest slot</span><span>member slot</span></solid-ui-guard></demo-auth>
+    <demo-auth state="in"><solid-ui-guard id="guard-in"><span slot="guest">guest slot</span><span>member slot</span></solid-ui-guard></demo-auth>
+    <solid-ui-solid-emblem style="font-size:40px"></solid-ui-solid-emblem>
+    <solid-ui-photo-capture name="photo"></solid-ui-photo-capture>
+  </div>
+
+  <h2>RDF form <small>(demo/form.ttl over demo/alice.ttl, via solid-logic's store)</small></h2>
+  <demo-store>
+    <solid-ui-rdf-form id="rdf" formUrl="" subjectUrl=""></solid-ui-rdf-form>
+  </demo-store>
+
+  <h2>Avatar</h2>
+  <div class="row">
+    <demo-auth state="in"><solid-ui-avatar></solid-ui-avatar></demo-auth>
+    <demo-auth state="in" avatar="demo/alice.svg"><solid-ui-avatar></solid-ui-avatar></demo-auth>
+  </div>
+
+  <h2>Account <small>(mock auth; Log In / Sign out flip the state)</small></h2>
+  <div class="states">
+    <span>initializing</span><demo-auth state="initializing"><solid-ui-account></solid-ui-account></demo-auth>
+    <span>logged out</span><demo-auth state="out"><solid-ui-account></solid-ui-account></demo-auth>
+    <span>logged in, no photo</span><demo-auth state="in"><solid-ui-account></solid-ui-account></demo-auth>
+    <span>logged in</span><demo-auth id="alice" state="in" avatar="demo/alice.svg"><solid-ui-account></solid-ui-account></demo-auth>
+  </div>
+</body>
+</html>

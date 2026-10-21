@@ -1,0 +1,13 @@
+{
+  "from": "../../upstream-solid-ui/src",
+  "to": "../src",
+  "roots": ["widgets", "utils", "lib", "login", "signup", "acl", "chat", "create", "header", "footer", "matrix", "media", "v2", "icons"],
+  "skip": [
+    "^lib/components/", "^lib/auth/", "^lib/dialogs/", "^lib/forms/",
+    "^lib/ns\\.js$", "^lib/timing\\.ts$", "^lib/values\\.ts$"
+  ],
+  "bareTypes": {
+    "solid-logic": ["AppDetails", "AuthenticationContext"],
+    "pane-registry": ["PaneDefinition", "DataBrowserContext", "NewPaneOptions"]
+  }
+}

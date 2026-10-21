@@ -1,0 +1,53 @@
+{
+  "from": "../../upstream-profile-pane/src",
+  "to": "../panes/profile-pane/src",
+  "roots": [
+    "."
+  ],
+  "skip": [],
+  "bareModules": {
+    "solid-ui": "../src/solid-ui.js",
+    "solid-ui/components": "../src/index.js",
+    "solid-ui/components/account": "../src/components/account/index.js",
+    "solid-ui/components/avatar": "../src/components/avatar/index.js",
+    "solid-ui/components/button": "../src/components/button/index.js",
+    "solid-ui/components/combobox": "../src/components/combobox/index.js",
+    "solid-ui/components/combobox-option": "../src/components/combobox-option/index.js",
+    "solid-ui/components/dialog": "../src/components/dialog/index.js",
+    "solid-ui/components/dialog-content": "../src/components/dialog-content/index.js",
+    "solid-ui/components/dialog-footer": "../src/components/dialog-footer/index.js",
+    "solid-ui/components/dialog-header": "../src/components/dialog-header/index.js",
+    "solid-ui/components/dialog-provider": "../src/components/dialog-provider/index.js",
+    "solid-ui/components/dialogs-root": "../src/components/dialogs-root/index.js",
+    "solid-ui/components/guard": "../src/components/guard/index.js",
+    "solid-ui/components/input": "../src/components/input/index.js",
+    "solid-ui/components/login-button": "../src/components/login-button/index.js",
+    "solid-ui/components/login-modal": "../src/components/login-modal/index.js",
+    "solid-ui/components/logout-button": "../src/components/logout-button/index.js",
+    "solid-ui/components/menu": "../src/components/menu/index.js",
+    "solid-ui/components/menu-item": "../src/components/menu-item/index.js",
+    "solid-ui/components/photo-capture": "../src/components/photo-capture/index.js",
+    "solid-ui/components/photo-capture-modal": "../src/components/photo-capture-modal/index.js",
+    "solid-ui/components/provider": "../src/components/provider/index.js",
+    "solid-ui/components/rdf-form": "../src/components/rdf-form/index.js",
+    "solid-ui/components/rdf-input": "../src/components/rdf-input/index.js",
+    "solid-ui/components/select": "../src/components/select/index.js",
+    "solid-ui/components/select-option": "../src/components/select-option/index.js",
+    "solid-ui/components/signup-button": "../src/components/signup-button/index.js",
+    "solid-ui/components/solid-emblem": "../src/components/solid-emblem/index.js"
+  },
+  "bareTypes": {
+    "solid-logic": [
+      "AppDetails",
+      "AuthenticationContext"
+    ],
+    "pane-registry": [
+      "PaneDefinition",
+      "DataBrowserContext",
+      "NewPaneOptions"
+    ],
+    "lit-html": [
+      "TemplateResult"
+    ]
+  }
+}

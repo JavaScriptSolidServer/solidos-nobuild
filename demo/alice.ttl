@@ -1,0 +1,8 @@
+@prefix vcard: <http://www.w3.org/2006/vcard/ns#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<#me> vcard:fn "Alice Example" ;
+  vcard:hasEmail <mailto:alice@example.org> ;
+  foaf:nick "alice" ;
+  vcard:bday "1990-04-01"^^xsd:date .

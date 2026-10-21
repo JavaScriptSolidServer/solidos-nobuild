@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pane sandbox</title>
+  <script src="src/importmap.js"></script>
+  <link rel="stylesheet" href="src/styles/theme.css">
+  <style>
+    body { margin: 0; background: #fff; }
+    .sandbox-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; padding: .75rem 1.5rem; border-bottom: 1px solid #e2e8f0; }
+    .sandbox-header h1 { font-size: 1.1rem; margin: 0; }
+    .sandbox-subject { display: flex; gap: .5rem; align-items: center; font-size: .85rem; color: #4a5565; }
+    .sandbox-subject a { color: inherit; word-break: break-all; }
+    .sandbox-subject form { display: flex; gap: .5rem; flex: 1; max-width: 100%; }
+    .sandbox-subject input { flex: 1; min-width: 0; width: 28rem; max-width: 100%; padding: .3rem .5rem; border: 1px solid #99a1af; border-radius: 5px; font: inherit; }
+    .sandbox-main { padding: 1.5rem; }
+    .sandbox-error { color: #b00020; white-space: pre-wrap; }
+    /* The host page provides this, as mashlib does (src/styles/mash-utilities.css); panes rely on it. */
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+  </style>
+</head>
+<body>
+  <solid-ui-provider>
+    <header class="sandbox-header">
+      <div>
+        <h1><span id="pane-name">…</span> pane, no build</h1>
+        <div class="sandbox-subject">
+          <form id="subject-form">
+            <input id="subject" aria-label="Subject" spellcheck="false">
+            <solid-ui-button type="submit" variant="secondary">Load</solid-ui-button>
+          </form>
+        </div>
+      </div>
+      <solid-ui-account></solid-ui-account>
+    </header>
+    <main class="sandbox-main"></main>
+  </solid-ui-provider>
+
+  <script type="module">
+    // Same context and flow as solidos-toolkit's pane sandbox (src/pane-sandbox.ts),
+    // on plain files: ?pane=<dir under panes/>&subject=<uri>.
+    import { sym } from 'rdflib'
+    import { authn, solidLogicSingleton, store } from 'solid-logic'
+    import { utils } from 'solid-ui'
+    import './src/index.js'
+
+    const DEFAULT_SUBJECTS = {
+      'profile-pane': 'https://testingsolidos.solidcommunity.net/profile/card#me',
+    }
+
+    const params = new URL(location.href).searchParams
+    const paneDir = params.get('pane') ?? 'profile-pane'
+    const main = document.querySelector('main')
+    const subjectInput = document.getElementById('subject')
+
+    function unsupportedPane (name) {
+      return {
+        name: `missing:${name}`,
+        icon: '',
+        label: () => `Missing pane: ${name}`,
+        render: (_subject, context) => {
+          const div = context.dom.createElement('div')
+
+          div.textContent = `Pane not registered in sandbox context: ${name}`
+
+          return div
+        },
+      }
+    }
+
+    function getOutliner (dom) {
+      const link = (obj) => {
+        const a = dom.createElement('a')
+
+        a.href = obj.uri
+        a.textContent = utils.label(obj)
+        a.target = '_blank'
+        a.rel = 'noopener noreferrer'
+
+        return a
+      }
+
+      return {
+        VIEWAS_boring_default: null,
+        propertyTR: (outlinerDom) => {
+          const tr = outlinerDom.createElement('tr')
+
+          tr.appendChild(outlinerDom.createElement('td'))
+
+          return tr
+        },
+        outlineObjectTD: (obj) => {
+          const td = dom.createElement('td')
+
+          td.appendChild(link(obj))
+
+          return td
+        },
+        GotoSubject: (subject, _expand, _pane, _solo, _referrer, table) => {
+          const tr = dom.createElement('tr')
+
+          tr.appendChild(dom.createElement('td')).appendChild(link(subject))
+          table.appendChild(tr)
+        },
+      }
+    }
+
+    async function render (pane, context, subject) {
+      subjectInput.value = subject
+      params.set('subject', subject)
+      history.replaceState(null, '', `?${params}`)
+
+      try {
+        await store.fetcher.load(subject)
+      } catch (error) {
+        console.warn(`Failed loading subject ${subject}, rendering anyway...`, error)
+      }
+
+      main.replaceChildren(pane.render(sym(subject), context))
+    }
+
+    try {
+      const { default: pane } = await import(`./panes/${paneDir}/src/index.js`)
+      const context = {
+        session: {
+          store,
+          paneRegistry: {
+            byName: (name) => name === pane.name ? pane : unsupportedPane(name),
+            list: [],
+            paneForIcon: {},
+            paneForPredicate: {},
+            register: () => {},
+          },
+          logic: solidLogicSingleton,
+        },
+        dom: document,
+        getOutliner,
+      }
+
+      store.fetcher.crossSite = true
+      store.fetcher.withCredentials = false
+
+      document.getElementById('pane-name').textContent = pane.name
+      document.title = `${pane.name} pane, no build`
+
+      document.getElementById('subject-form').addEventListener('submit', (e) => {
+        e.preventDefault()
+        render(pane, context, subjectInput.value.trim())
+      })
+
+      await authn.checkUser()
+      await render(pane, context, params.get('subject') ?? DEFAULT_SUBJECTS[paneDir] ?? '')
+
+      if (params.has('smoke')) import(`./demo/${paneDir.replace(/-pane$/, '')}-smoke.js`)
+    } catch (error) {
+      main.innerHTML = '<pre class="sandbox-error"></pre>'
+      main.firstChild.textContent = `${error.message}\n${error.stack ?? ''}`
+      console.error(error)
+    }
+  </script>
+</body>
+</html>
