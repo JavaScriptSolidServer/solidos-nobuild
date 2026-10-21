@@ -12,6 +12,7 @@
 
 import { spawn } from 'node:child_process'
 import { writeFileSync, mkdirSync } from 'node:fs'
+import { dirname } from 'node:path'
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -164,6 +165,7 @@ export async function launch ({ profile, port = 9333, width = 1300, height = 900
     async screenshot (path) {
       const { data } = await send('Page.captureScreenshot', { format: 'png' })
 
+      mkdirSync(dirname(path), { recursive: true }) // .shots/ is gitignored, so a fresh checkout lacks it
       writeFileSync(path, Buffer.from(data, 'base64'))
     },
 
