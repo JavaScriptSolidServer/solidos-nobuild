@@ -81,6 +81,7 @@ export async function launch ({ profile, port = 9333, width = 1300, height = 900
   })
 
   const consoleLines = []
+  let promptText = '' // what window.prompt() returns; see page.answerPrompts
 
   listeners.add(({ method, params }) => {
     if (method === 'Runtime.consoleAPICalled') consoleLines.push(`${params.type}: ${params.args.map(a => a.value ?? a.description ?? '').join(' ')}`)
@@ -88,7 +89,7 @@ export async function launch ({ profile, port = 9333, width = 1300, height = 900
     // alert/confirm/prompt would block the page (and every evaluate): log and dismiss.
     if (method === 'Page.javascriptDialogOpening') {
       consoleLines.push(`dialog: ${params.type}: ${params.message}`)
-      send('Page.handleJavaScriptDialog', { accept: params.type !== 'beforeunload' }).catch(() => {})
+      send('Page.handleJavaScriptDialog', { accept: params.type !== 'beforeunload', promptText }).catch(() => {})
     }
   })
 
@@ -168,6 +169,9 @@ export async function launch ({ profile, port = 9333, width = 1300, height = 900
       mkdirSync(dirname(path), { recursive: true }) // .shots/ is gitignored, so a fresh checkout lacks it
       writeFileSync(path, Buffer.from(data, 'base64'))
     },
+
+    // Answer the next window.prompt()s with this text (dialogs are always dismissed, never left open).
+    answerPrompts (text) { promptText = text },
 
     // Real keystrokes into the focused element (fires input events like a user).
     async type (text) {
