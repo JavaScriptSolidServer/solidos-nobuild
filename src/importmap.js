@@ -27,6 +27,10 @@ if (published.length) console.info(`importmap: published builds for ${published.
 script.type = 'importmap'
 script.textContent = JSON.stringify({
   imports: {
+    // This tree by package path, for anything built on it (e.g. mashlib-lws):
+    // import 'solidos-nobuild/src/lib/write-fallback.js'
+    'solidos-nobuild/': here('../'),
+
     // solid-ui itself, as panes import it (package.json "exports" upstream)
     'solid-ui': here('./solid-ui.js'),
     'solid-ui/components': here('./index.js'),
