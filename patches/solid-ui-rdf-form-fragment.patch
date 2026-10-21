@@ -1,0 +1,13 @@
+diff --git a/src/components/rdf-form/RDFForm.ts b/src/components/rdf-form/RDFForm.ts
+index 0011a7e..3d5a9ba 100644
+--- a/src/components/rdf-form/RDFForm.ts
++++ b/src/components/rdf-form/RDFForm.ts
+@@ -70,7 +70,7 @@ export default class RDFForm extends WebComponent {
+       const formRoot = findForm(this.currentStore, hrefFromUrlValue(this.formUrl))                          // If there are more 'a ui:Form' elements in a form file
+       if (!formRoot) throw new Error('No ui:Form found in ' + hrefFromUrlValue(this.formUrl))
+ 
+-      const formDocument = sym(hrefFromUrlValue(this.formUrl))                         // rdflib NamedNode for the document
++      const formDocument = sym(hrefFromUrlValue(this.formUrl)).doc()                   // the form document: formUrl may carry a #fragment (findForm supports one)
+       const parts = store.each(formRoot, ns.ui('parts'), null, formDocument)
+       const partsBySequence = sortBySequence(store, parts)
+       const partItems = (partsBySequence || []).flatMap(item => {

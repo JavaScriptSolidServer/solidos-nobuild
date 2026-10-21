@@ -1,6 +1,8 @@
-# solid-ui, no build
+# SolidOS, no build
 
-All of [SolidOS/solid-ui](https://github.com/SolidOS/solid-ui) (v5.0.1 `main`) — the 27 web components and the legacy library the panes use — as plain ES modules. Edit a file, reload. No Vite, no TypeScript compiler, no plugins.
+All of [SolidOS](https://github.com/SolidOS) — solid-ui 5.0.1, mashlib 3.0.0, solid-panes 5.0.0 and the panes — as plain ES modules. Edit a file, reload. No Vite, no webpack, no TypeScript compiler, no plugins. Runs from inside a pod: a [JSS](https://github.com/JavaScriptSolidServer/JavaScriptSolidServer) pod serves it as its data browser with `--mashlib-module` (see "Running on a pod").
+
+Live from this branch: https://javascriptsolidserver.github.io/solidos-nobuild/ (the component gallery; `mashlib/databrowser.html?uri=…` is the full data browser on any public resource). Licence: MIT, see LICENSE and NOTICE.md.
 
 ```sh
 python3 -m http.server 8731   # any static server
@@ -14,6 +16,8 @@ python3 -m http.server 8731   # any static server
 - `legacy.html` — the legacy library. Runs 16 behaviour checks (buttons, the legacy form renderer, tabs, CodeEditor, loginStatusBox, ACLs, chat signatures, header/footer, camera button); `?load` imports all 85 modules and checks `src/solid-ui.js` exports the same 45 names as upstream's published `dist/index.esm.js`.
 
 ## Tests
+
+Upstream clones are expected beside this repository as `../upstream-<package>` (only for reconverting); `tests/pod.mjs` reads the local pod's password from `../jss-password.txt` or `POD_PASSWORD`, and its data directory from `POD_DATA`.
 
 ```sh
 python3 -m http.server 8731 &           # in this directory
@@ -152,7 +156,7 @@ Found while converting and testing; each reproduced with upstream's own code or 
 
 | Where | What | Status |
 |---|---|---|
-| solid-ui 5.0.1 `rdf-form` | With a `formUrl` that has a `#fragment` (which `findForm` supports), parts are looked up in a graph named by the full URL, so the form renders empty | Fixed here; patch ready (`../solid-ui-rdf-form-fragment.patch`) |
+| solid-ui 5.0.1 `rdf-form` | With a `formUrl` that has a `#fragment` (which `findForm` supports), parts are looked up in a graph named by the full URL, so the form renders empty | Fixed here; patch ready (`patches/solid-ui-rdf-form-fragment.patch`) |
 | solid-ui 5.0.1 `widgets/forms.js` | The legacy "Multiple" field logs `list.elements` before creating the list, so on a new resource it throws and never adds the minimum blank items (seen opening a new schedule) | Fixed here (one line moved) |
 | issue-pane 4.0.0 | A tracker it has just minted shows "Tracker settings need an update": `fixSubClasses` looks for `wf:Task`'s `owl:disjointUnionOf` in the tracker's document, but it is only in the workflow ontology | Same with the published build |
 | JSS 0.0.212 + SolidOS | JSS accepts ACL documents only as JSON-LD (415 + `Accept-Put` for Turtle), by design; SolidOS writes ACLs as Turtle (long chat, address book, schedule, the sharing editor) | Client-side fallback here (`lib/write-fallback.js`) |
