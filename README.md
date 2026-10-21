@@ -58,9 +58,11 @@ Component CSS files are byte-for-byte upstream, except `src/lib/WebComponent.sty
 
 ## Deviations from upstream
 
+- `src/lib/write-fallback.js` wraps the shared store's `fetcher.webOperation`: a Turtle/N3 write answered with 415 and an `Accept-Put` (or `Accept`) that lists JSON-LD is retried once as expanded JSON-LD. JSS stores ACLs only as JSON-LD; SolidOS writes them as Turtle. All panes write through this method, so this covers them all.
 - Atkinson Hyperlegible Next is self-hosted (`src/fonts/`, SIL OFL) instead of loaded from Google Fonts, so pages make no requests to Google.
 
 - `src/index.js` attaches a `ContextRoot`, so a consumer that connects before its provider still gets the context. Upstream relies on registration order, which top-level-await stylesheets can't guarantee.
+- `widgets/forms.js`: the "Multiple" field creates its list before logging it (upstream throws on a new resource).
 - `rdf-form`: parts are looked up in the form *document*, so a `formUrl` with a fragment works. Upstream uses the full URL as the graph and renders an empty form (upstream bug).
 - `SolidAuth.login()` loads the login modal lazily.
 - `fieldParams` keeps only the keys the web components read; the `style`/`size`/`pattern` entries serve the legacy widgets.
@@ -151,8 +153,9 @@ Found while converting and testing; each reproduced with upstream's own code or 
 | Where | What | Status |
 |---|---|---|
 | solid-ui 5.0.1 `rdf-form` | With a `formUrl` that has a `#fragment` (which `findForm` supports), parts are looked up in a graph named by the full URL, so the form renders empty | Fixed here; patch ready (`../solid-ui-rdf-form-fragment.patch`) |
+| solid-ui 5.0.1 `widgets/forms.js` | The legacy "Multiple" field logs `list.elements` before creating the list, so on a new resource it throws and never adds the minimum blank items (seen opening a new schedule) | Fixed here (one line moved) |
 | issue-pane 4.0.0 | A tracker it has just minted shows "Tracker settings need an update": `fixSubClasses` looks for `wf:Task`'s `owl:disjointUnionOf` in the tracker's document, but it is only in the workflow ontology | Same with the published build |
-| JSS 0.0.212 + SolidOS | JSS accepts ACL documents only as JSON-LD (415 for Turtle); SolidOS writes ACLs as Turtle (long chat, address book, schedule, the sharing editor) | Server-side; address book and schedule creation stop there |
+| JSS 0.0.212 + SolidOS | JSS accepts ACL documents only as JSON-LD (415 + `Accept-Put` for Turtle), by design; SolidOS writes ACLs as Turtle (long chat, address book, schedule, the sharing editor) | Client-side fallback here (`lib/write-fallback.js`) |
 | profile-pane 4.0.0 | `SocialData: SocialPresentation` is literal text inside the social card's markup (a type annotation pasted into a template) | Harmless |
 | pane-registry 5.0.1 | Published as CommonJS that assigns its exports at runtime, so ESM consumers (and CDNs) can't get named exports | Shimmed here |
 | solid-ui 5.0.1 (built CSS) | The Tailwind reset in every component's `:host` sets `font-family: ui-sans-serif, …`, overriding the theme's Atkinson Hyperlegible for everything inside a component, panes included (they render in solid-panes' file-explorer component) | Same with upstream's build; reproduced faithfully |

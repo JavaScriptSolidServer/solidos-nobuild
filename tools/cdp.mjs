@@ -18,12 +18,18 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 export async function launch ({ profile, port = 9333, width = 1300, height = 900, browser = 'chromium-browser' } = {}) {
   if (profile) mkdirSync(profile, { recursive: true })
 
+  // Never attach to a browser that is already on this port (a leftover run, or
+  // someone else's): its session and state would leak into the test.
+  const taken = await fetch(`http://127.0.0.1:${port}/json/version`).then(() => true, () => false)
+
+  if (taken) throw new Error(`DevTools port ${port} is already in use; stop that browser or pick another port`)
+
   const proc = spawn(browser, [
     '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
     `--remote-debugging-port=${port}`, `--window-size=${width},${height}`,
     ...(profile ? [`--user-data-dir=${profile}`] : []),
     'about:blank',
-  ], { stdio: ['ignore', 'ignore', 'pipe'] })
+  ], { stdio: ['ignore', 'ignore', 'pipe'], detached: true }) // own process group: close() kills the whole tree
 
   let stderr = ''
 
@@ -42,7 +48,7 @@ export async function launch ({ profile, port = 9333, width = 1300, height = 900
   }
 
   if (!target) {
-    proc.kill()
+    try { process.kill(-proc.pid, 'SIGTERM') } catch { proc.kill() }
     throw new Error(`no DevTools target on :${port}\n${stderr.slice(-500)}`)
   }
 
@@ -150,8 +156,12 @@ export async function launch ({ profile, port = 9333, width = 1300, height = 900
 
     async close () {
       try { ws.close() } catch {}
-      proc.kill()
-      await sleep(200)
+      try { process.kill(-proc.pid, 'SIGTERM') } catch { proc.kill() } // snap's wrapper alone would leave Chromium running
+
+      for (let i = 0; i < 30; i++) {
+        if (!(await fetch(`http://127.0.0.1:${port}/json/version`).then(() => true, () => false))) break
+        await sleep(100)
+      }
     },
   }
 

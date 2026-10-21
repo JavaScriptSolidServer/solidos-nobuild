@@ -20,7 +20,6 @@ const only = process.argv.slice(2)
 // Failures with a confirmed cause outside this conversion: reported as KNOWN, not
 // counted. Each was reproduced with upstream's published builds or traced to the server.
 const KNOWN = [
-  [/415 \(Unsupported Media Type\)|Error setting access permissions/, 'JSS accepts ACLs only as JSON-LD; SolidOS writes them as Turtle'],
   [/has no disjointUnionOf|missing its allowed state list/, 'issue-pane 4.0.0: a newly minted tracker lacks wf:Task states (same with the published build)'],
 ]
 
@@ -196,6 +195,30 @@ tests.create = async (page) => {
 
   for (const [name, result] of Object.entries(created)) {
     check(`mintNew ${name}`, result.ok, result.ok ? `${result.uri.replace(POD, '/me/')} (${result.triples} triples)` : result.error)
+  }
+
+  // Their ACLs (written as Turtle by the panes) must be on disk, as JSON-LD via
+  // lib/write-fallback.js, with the owner keeping Control.
+  for (const [name, result] of Object.entries(created)) {
+    if (!result.ok) continue
+
+    const dir = `${DATA}${result.uri.replace(POD, '').replace(/[^/]*$/, '')}`
+    const acls = spawnSync('find', [dir, '-name', '*.acl'], { encoding: 'utf8' }).stdout.trim().split('\n').filter(Boolean)
+
+    if (!acls.length) continue // panes that don't set their own ACL inherit the folder's
+
+    const bad = acls.filter(file => {
+      try {
+        const json = JSON.parse(readFileSync(file, 'utf8'))
+
+        return !JSON.stringify(json).includes('http://www.w3.org/ns/auth/acl#Control') && !JSON.stringify(json).includes('acl:Control')
+      } catch {
+        return true
+      }
+    })
+
+    check(`${name}: ${acls.length} ACL file(s) written as JSON-LD, owner has Control`, bad.length === 0,
+      acls.map(f => f.replace(DATA, '/me/')).join(', ') + (bad.length ? ` — not JSON-LD or no Control: ${bad.map(f => f.replace(DATA, '/me/')).join(', ')}` : ''))
   }
 
   // Open each new resource in the shell, as a user following the link would.

@@ -5,7 +5,9 @@
 // This does not register the web components; import './index.js' for those
 // (upstream's CDN build does both: see src/cdn/legacy.ts).
 
+import { solidLogicSingleton } from 'solid-logic'
 import ns from './lib/ns.js'
+import { installWriteFallback } from './lib/write-fallback.js'
 import { acl, aclControl } from './acl/index.js'
 import { create } from './create/index.js'
 import { icons } from './lib/iconBase.js'
@@ -27,6 +29,10 @@ import * as widgets from './widgets/index.js'
 import { initHeader } from './header/index.js'
 import { initFooter } from './footer/index.js'
 import * as createTypes from './create/types.js'
+
+// Retry a write the server refuses with 415 as JSON-LD when it accepts that
+// (JSS keeps ACLs as JSON-LD); covers every pane, they all write through this fetcher.
+installWriteFallback(solidLogicSingleton.store.fetcher)
 
 export const dom = typeof window !== 'undefined' ? window.document : null // Idea that UI.dom can be adapted in non-browser environments
 

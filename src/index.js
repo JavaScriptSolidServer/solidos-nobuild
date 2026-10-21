@@ -7,8 +7,11 @@
 // defined gets answered once the provider arrives.
 
 import { ContextRoot } from '@lit/context'
+import { solidLogicSingleton } from 'solid-logic'
+import { installWriteFallback } from './lib/write-fallback.js'
 
 new ContextRoot().attach(document.documentElement)
+installWriteFallback(solidLogicSingleton.store.fetcher) // see lib/write-fallback.js
 
 await import('./components/provider/Provider.js')
 

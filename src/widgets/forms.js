@@ -487,9 +487,11 @@ field[ns.ui('Multiple').uri] = function (
   }
 
   async function saveListThenRefresh () {
+    // Fix vs upstream: they log list.elements before creating the list, so on a new
+    // resource (no list yet) this threw and the minimum blank items were never added.
+    createListIfNecessary()
     debug.log('save list: ' + debugString(list.elements)) // 20191214
 
-    createListIfNecessary()
     try {
       await kb.fetcher.putBack(dataDoc)
     } catch (err) {

@@ -10,14 +10,19 @@ const components = ['account', 'avatar', 'button', 'combobox', 'combobox-option'
   'login-modal', 'logout-button', 'menu', 'menu-item', 'photo-capture', 'photo-capture-modal', 'provider',
   'rdf-form', 'rdf-input', 'select', 'select-option', 'signup-button', 'solid-emblem']
 
-// A/B against upstream: ?published=issue-pane,contacts-pane maps those panes to
-// their published npm builds (esm.sh, dependencies external) instead of the
-// converted source here.
+// A/B against upstream: ?published=issue-pane,contacts-pane (or, where the URL is
+// the resource itself, as on a pod: localStorage.published = 'issue-pane') maps
+// those packages to their published npm builds (esm.sh, dependencies external)
+// instead of the converted source here.
 const PUBLISHED = {
+  'solid-panes': '5.0.0',
   'profile-pane': '4.0.0', 'folder-pane': '4.0.0', 'source-pane': '4.0.0', 'chat-pane': '4.0.0',
   'contacts-pane': '4.0.0', 'issue-pane': '4.0.0', 'meeting-pane': '4.0.0', 'activitystreams-pane': '2.0.0',
 }
-const published = (new URL(location.href).searchParams.get('published') ?? '').split(',').filter(p => PUBLISHED[p])
+const storedPublished = (() => { try { return localStorage.getItem('published') } catch { return null } })()
+const published = (new URL(location.href).searchParams.get('published') ?? storedPublished ?? '').split(',').filter(p => PUBLISHED[p])
+
+if (published.length) console.info(`importmap: published builds for ${published.join(', ')}`)
 
 script.type = 'importmap'
 script.textContent = JSON.stringify({
