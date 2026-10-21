@@ -110,6 +110,24 @@ export async function launch ({ profile, port = 9333, width = 1300, height = 900
     send,
     evaluate,
 
+    // Subscribe to DevTools events ({ method, params }); returns an unsubscribe function.
+    on (listener) {
+      listeners.add(listener)
+
+      return () => listeners.delete(listener)
+    },
+
+    async reload () {
+      const loaded = new Promise(resolve => {
+        const listener = ({ method }) => { if (method === 'Page.loadEventFired') { listeners.delete(listener); resolve() } }
+
+        listeners.add(listener)
+      })
+
+      await send('Page.reload', { ignoreCache: false })
+      await Promise.race([loaded, sleep(30000)])
+    },
+
     async goto (url, { waitLoad = true } = {}) {
       const loaded = waitLoad ? new Promise(resolve => {
         const listener = ({ method }) => { if (method === 'Page.loadEventFired') { listeners.delete(listener); resolve() } }

@@ -11,7 +11,9 @@ export function defineIcon (tagName, svg) {
 
       const root = this.attachShadow({ mode: 'open' })
 
-      root.innerHTML = `<style>:host{display:inline-block;width:1em;height:1em}svg{width:100%;height:100%;display:block}</style>${svg}`
+      // Same as solidos-toolkit's unplugin-icons compiler: the host is inline-flex and
+      // the svg fills it (width/height 100%), so CSS on the icon element sets the size.
+      root.innerHTML = `<style>:host { display: inline-flex; }</style>${svg.replace('<svg ', '<svg width="100%" height="100%" ')}`
     }
   })
 }
