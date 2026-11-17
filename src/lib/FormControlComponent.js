@@ -33,7 +33,7 @@ export class FormControlTrait {
 
   renderLabel () {
     return this.target.label
-      ? html`<label id="${this.labelId}" for="${this.controlId}">${this.target.label}</label>`
+      ? html`<label id="${this.labelId}" for="${this.controlId}" class=${this.target.srOnlyLabel ? 'sr-only' : nothing}>${this.target.label}</label>`
       : nothing
   }
 
@@ -76,6 +76,7 @@ export default class FormControlComponent extends WebComponent {
     placeholder: { type: String, reflect: true },
     required: { type: Boolean, reflect: true },
     disabled: { type: Boolean, reflect: true },
+    srOnlyLabel: { type: Boolean, reflect: true, attribute: 'sr-only-label' },
   }
 
   constructor () {
@@ -88,6 +89,7 @@ export default class FormControlComponent extends WebComponent {
     this.placeholder = ''
     this.required = false
     this.disabled = false
+    this.srOnlyLabel = false
 
     this.controlTrait = this.addTrait(new FormControlTrait(this, {
       getControlElement: () => this.controlElement,

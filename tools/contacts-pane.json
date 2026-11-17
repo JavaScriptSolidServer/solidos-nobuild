@@ -33,13 +33,19 @@
     "solid-ui/components/select": "../src/components/select/index.js",
     "solid-ui/components/select-option": "../src/components/select-option/index.js",
     "solid-ui/components/signup-button": "../src/components/signup-button/index.js",
-    "solid-ui/components/solid-emblem": "../src/components/solid-emblem/index.js"
+    "solid-ui/components/solid-emblem": "../src/components/solid-emblem/index.js",
+    "solid-ui/components/access-control-modal": "../src/components/access-control-modal/index.js",
+    "solid-ui/components/error-state": "../src/components/error-state/index.js",
+    "solid-ui/components/file-explorer-header": "../src/components/file-explorer-header/index.js",
+    "solid-ui/components/file-explorer-provider": "../src/components/file-explorer-provider/index.js",
+    "solid-ui/components/resource-actions-menu": "../src/components/resource-actions-menu/index.js"
   },
   "bareTypes": {
     "solid-logic": [
       "AppDetails",
       "AuthenticationContext",
-      "SolidLogic"
+      "SolidLogic",
+      "SolidNamespace"
     ],
     "pane-registry": [
       "DataBrowserContext",

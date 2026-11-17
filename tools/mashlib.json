@@ -34,7 +34,12 @@
     "solid-ui/components/select-option": "../src/components/select-option/index.js",
     "solid-ui/components/signup-button": "../src/components/signup-button/index.js",
     "solid-ui/components/solid-emblem": "../src/components/solid-emblem/index.js",
-    "solid-panes": "../panes/solid-panes/src/index.js"
+    "solid-panes": "../panes/solid-panes/src/index.js",
+    "solid-ui/components/access-control-modal": "../src/components/access-control-modal/index.js",
+    "solid-ui/components/error-state": "../src/components/error-state/index.js",
+    "solid-ui/components/file-explorer-header": "../src/components/file-explorer-header/index.js",
+    "solid-ui/components/file-explorer-provider": "../src/components/file-explorer-provider/index.js",
+    "solid-ui/components/resource-actions-menu": "../src/components/resource-actions-menu/index.js"
   },
   "bareTypes": {
     "pane-registry": [
@@ -45,7 +50,7 @@
     ]
   },
   "generated": {
-    "versionInfo.js": "// Upstream generates this at build time (timestamp.sh); pinned to the converted commit.\nexport default {\n  buildTime: '2026-09-29T18:04:02Z',\n  commit: '309a1e9',\n  npmInfo: {\n    mashlib: '3.0.0'\n  }\n}\n"
+    "versionInfo.js": "// Upstream generates this at build time (timestamp.sh); pinned to the converted commit.\nexport default {\n  buildTime: '2026-11-16T18:49:47Z',\n  commit: 'df7aab3',\n  npmInfo: {\n    mashlib: '3.1.0'\n  }\n}\n"
   },
   "cssImports": {
     "solid-ui/theme.css": "../src/styles/theme.css"

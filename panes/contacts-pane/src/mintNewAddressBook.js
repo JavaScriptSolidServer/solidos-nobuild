@@ -15,9 +15,9 @@ const { setACLUserPublic } = solidLogicSingleton.acl
 // Mint a new address book
 
 export function mintNewAddressBook (dataBrowserContext, context) {
-  return new Promise(function (resolve, reject) {
+  return new Promise((resolve, reject) => {
     UI.login.ensureLoadedProfile(context).then(
-      context => {
+      (context) => {
         // 20180713
         debug.log('Logged in as ' + context.me)
         const me = context.me
@@ -43,10 +43,10 @@ export function mintNewAddressBook (dataBrowserContext, context) {
           ) // @@ write doc back
           kb.fetcher
             .putBack(doc, { contentType: 'text/turtle' })
-            .then(function (_xhr) {
+            .then((_xhr) => {
               resolve(context)
             })
-            .catch(function (err) {
+            .catch((err) => {
               debug.error('Failed to fetch new address book. Stack: ' + err)
               reject(
                 new Error('Error creating document for new group ' + err)
@@ -115,46 +115,39 @@ export function mintNewAddressBook (dataBrowserContext, context) {
         }
 
         function doNextTask () {
-          function checkOKSetACL (uri, ok) {
-            if (!ok) {
-              return reject(new Error('Error writing new file ' + task.to))
-            }
+          if (toBeWritten.length === 0) {
+            claimSuccess(newAppInstance, appInstanceNoun)
+            return
+          }
 
+          const task = toBeWritten.shift()
+          debug.log('Creating new file ' + task.to + ' in new instance ')
+          const dest = $rdf.uri.join(task.to, newBase)
+          const aclOptions = task.aclOptions || {}
+
+          const setACLAndContinue = () => {
             setACLUserPublic(dest, me, aclOptions)
               .then(() => doNextTask())
-              .catch(err => {
+              .catch((err) => {
                 debug.error('Error setting access permissions for ' + task.to + '. Stack: ' + err)
-                const message =
-                  'Error setting access permissions for ' +
-                  task.to +
-                  '.'
-                return reject(new Error(message))
+                reject(new Error('Error setting access permissions for ' + task.to + '.'))
               })
           }
 
-          if (toBeWritten.length === 0) {
-            claimSuccess(newAppInstance, appInstanceNoun)
+          if ('content' in task) {
+            kb.fetcher
+              .webOperation('PUT', dest, {
+                data: task.content,
+                saveMetadata: true,
+                contentType: task.contentType
+              })
+              .then(() => setACLAndContinue())
+          } else if ('existing' in task) {
+            setACLAndContinue()
           } else {
-            var task = toBeWritten.shift() /* eslint-disable-line no-var */
-            debug.log('Creating new file ' + task.to + ' in new instance ')
-            var dest = $rdf.uri.join(task.to, newBase) /* eslint-disable-line no-var */
-            var aclOptions = task.aclOptions || {} /* eslint-disable-line no-var */
-
-            if ('content' in task) {
-              kb.fetcher
-                .webOperation('PUT', dest, {
-                  data: task.content,
-                  saveMetadata: true,
-                  contentType: task.contentType
-                })
-                .then(() => checkOKSetACL(dest, true))
-            } else if ('existing' in task) {
-              checkOKSetACL(dest, true)
-            } else {
-              reject(new Error('Copy not expected while buiding new app.'))
-              // const from = task.from || task.to // default source to be same as dest
-              // UI.widgets.webCopy(base + from, dest, task.contentType, checkOKSetACL)
-            }
+            reject(new Error('Copy not expected while buiding new app.'))
+            // const from = task.from || task.to // default source to be same as dest
+            // UI.widgets.webCopy(base + from, dest, task.contentType, ...)
           }
         }
         doNextTask()

@@ -14,6 +14,7 @@ new ContextRoot().attach(document.documentElement)
 installWriteFallback(solidLogicSingleton.store.fetcher) // see lib/write-fallback.js
 
 await import('./components/provider/Provider.js')
+await import('./components/file-explorer-provider/FileExplorerProvider.js') // solid-ui 5.1.0: second, as upstream
 
 await Promise.all([
   import('./components/account/Account.js'),
@@ -38,6 +39,11 @@ await Promise.all([
   import('./components/select/Select.js'),
   import('./components/select-option/SelectOption.js'),
   import('./components/solid-emblem/SolidEmblem.js'),
+  // solid-ui 5.1.0
+  import('./components/access-control-modal/index.js'),
+  import('./components/error-state/index.js'),
+  import('./components/file-explorer-header/index.js'),
+  import('./components/resource-actions-menu/index.js'),
 ])
 
 export { showDialog } from './lib/dialogs.js'

@@ -40,7 +40,12 @@
     "solid-ui/components/select-option": "../src/components/select-option/index.js",
     "solid-ui/components/signup-button": "../src/components/signup-button/index.js",
     "solid-ui/components/solid-emblem": "../src/components/solid-emblem/index.js",
-    "profile-pane": "../panes/profile-pane/src/index.js"
+    "profile-pane": "../panes/profile-pane/src/index.js",
+    "solid-ui/components/access-control-modal": "../src/components/access-control-modal/index.js",
+    "solid-ui/components/error-state": "../src/components/error-state/index.js",
+    "solid-ui/components/file-explorer-header": "../src/components/file-explorer-header/index.js",
+    "solid-ui/components/file-explorer-provider": "../src/components/file-explorer-provider/index.js",
+    "solid-ui/components/resource-actions-menu": "../src/components/resource-actions-menu/index.js"
   },
   "bareTypes": {
     "solid-logic": [
@@ -66,7 +71,7 @@
     ]
   },
   "generated": {
-    "versionInfo.js": "// Upstream generates this at build time (timestamp.sh); pinned to the converted commit.\nexport default {\n  buildTime: '2026-09-29T17:51:21Z',\n  commit: '504265f',\n  npmInfo: {\n    'solid-panes': '5.0.0'\n  }\n}\n"
+    "versionInfo.js": "// Upstream generates this at build time (timestamp.sh); pinned to the converted commit.\nexport default {\n  buildTime: '2026-11-16T18:31:34Z',\n  commit: '617cc9d',\n  npmInfo: {\n    'solid-panes': '5.1.0'\n  }\n}\n"
   },
   "customMedia": {
     "file": "../../upstream-solid-ui/src/styles/breakpoints.css",

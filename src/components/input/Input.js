@@ -29,6 +29,7 @@ export default class Input extends FormControlComponent {
     return html`
       ${this.controlTrait.renderLabel()}
       <div class="input-wrapper">
+        <slot @slotchange=${this.onLeftIconSlotChange} name="left-icon"></slot>
         <input
           id=${this.controlTrait.controlId}
           type=${this.type}
@@ -42,6 +43,12 @@ export default class Input extends FormControlComponent {
         />
       </div>
     `
+  }
+
+  onLeftIconSlotChange (e) {
+    const slot = e.target
+
+    this.toggleAttribute('data-has-left-icon', slot.assignedElements().length > 0)
   }
 
   onKeyDown (e) {

@@ -1,6 +1,6 @@
 # SolidOS, no build
 
-All of [SolidOS](https://github.com/SolidOS) — solid-ui 5.0.1, mashlib 3.0.0, solid-panes 5.0.0 and the panes — as plain ES modules. Edit a file, reload. No Vite, no webpack, no TypeScript compiler, no plugins. Runs from inside a pod: a [JSS](https://github.com/JavaScriptSolidServer/JavaScriptSolidServer) pod serves it as its data browser with `--mashlib-module` (see "Running on a pod").
+All of [SolidOS](https://github.com/SolidOS) — solid-ui 5.1.0, mashlib 3.1.0, solid-panes 5.1.0 and the panes — as plain ES modules. Edit a file, reload. No Vite, no webpack, no TypeScript compiler, no plugins. Runs from inside a pod: a [JSS](https://github.com/JavaScriptSolidServer/JavaScriptSolidServer) pod serves it as its data browser with `--mashlib-module` (see "Running on a pod").
 
 Live from this branch: https://jss.live/solidos-nobuild/ (the component gallery; `mashlib/databrowser.html?uri=…` is the full data browser on any public resource). Licence: MIT, see LICENSE and NOTICE.md.
 

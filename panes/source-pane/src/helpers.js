@@ -12,39 +12,15 @@ const parseable = {
   'application/ld+json': true
 }
 
-export function happy (response, method) {
+export function happy (response, method, root = document) {
   if (!response.ok) {
     let msg = 'HTTP error on ' + method + '! Status: ' + response.status
     error(msg)
     if (response.status === 412) msg = 'Error: File changed by someone else'
-    const { showError } = getStatusSection()
+    const { showError } = getStatusSection(root)
     showError(msg)
   }
   return response.ok
-}
-
-/** Set Caret position in a text box
-* @param {Element} elem - the element to be tweaked
-* @param {Integer} caretPos - the poisition starting at zero
-* @credit  https://stackoverflow.com/questions/512528/set-keyboard-caret-position-in-html-textbox
-*/
-function setCaretPosition (elem, cause) {
-  if (elem != null) {
-    if (cause.characterInFile === -1 && cause.lineNo) cause.lineNo += 1
-    const pos = cause.lineNo ? elem.value.split('\n', cause.lineNo).join('\n').length : 0
-    const caretPos = pos + cause.characterInFile
-    const textArea = elem
-    if (textArea.createTextRange) {
-      const range = textArea.createTextRange()
-      range.move('character', caretPos)
-      range.select()
-    } else {
-      elem.focus()
-      if (elem.selectionStart) {
-        elem.setSelectionRange(caretPos, caretPos)
-      }
-    }
-  }
 }
 
 function HTMLDataIsland (data) {
@@ -66,19 +42,24 @@ function HTMLDataIsland (data) {
   return [dataIsland, dataIslandContentType]
 }
 
-export function checkSyntax (store, subject, data, contentType, base) {
+export function checkSyntax (
+  store,
+  subject,
+  data,
+  contentType,
+  base,
+  root = document
+) {
   const fetcher = store.fetcher
-  const { showError, clearError } = getStatusSection()
-  const textArea = document.querySelector('.sourcePaneTextArea')
+  const { showError, clearError } = getStatusSection(root)
 
-  if (!showError || !clearError) return true
+  clearError()
   if (!contentType || !parseable[contentType]) return true // don't check things we don't understand
   if (contentType === 'text/html') {
     [data, contentType] = HTMLDataIsland(data)
     if (!contentType) return true
   }
   try {
-    clearError()
     if (contentType === 'application/json') {
       JSON.parse(data)
       return true
@@ -111,14 +92,15 @@ export function checkSyntax (store, subject, data, contentType, base) {
     }
     return true
   } catch (e) {
-    showError(e.message)
+    let message = e.message
     let cause = e
     while (cause && cause.cause) {
       cause = cause.cause
-      if (cause && cause.characterInFile) {
-        setCaretPosition(textArea, cause)
+      if (cause && typeof cause.characterInFile === 'number') {
+        message = `${message} (at character ${cause.characterInFile})`
       }
     }
+    showError(message)
     return false
   }
   return true

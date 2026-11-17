@@ -4,12 +4,12 @@ import { importCss } from '../importCss.js'
  **  This outline pane contains the properties which are
  ** internal to the user's interaction with the web, and are not normally displayed
  */
-/* global alert confirm */
-
-import { icons, ns, widgets } from 'solid-ui'
-import { BlankNode, IndexedFormula, literal, NamedNode, st, sym, Variable, Store } from 'rdflib'
+import { solidLogicSingleton } from 'solid-logic'
+import { icons, ns, utils, widgets } from 'solid-ui'
+import { BlankNode, literal, NamedNode, st, sym, Variable, Store } from 'rdflib'
 // (type-only import removed: PaneDefinition from 'pane-registry')
 importCss(new URL('./internalPane.css', import.meta.url))
+import '../components/resource-action-dialog/ResourceActionDialog.js'
 
 const pane = {
   icon: icons.originalIconBase + 'tango/22-emblem-system.png',
@@ -40,45 +40,23 @@ const pane = {
     const div = dom.createElement('div')
     div.classList.add('internalPane', 'internalPaneContent')
 
-    function deleteRecursive (kb, folder) {
-      const fetcher = (kb).fetcher
-      if (!fetcher) {
-        console.error('No fetcher available')
-        return
-      }
-      return new Promise(function (resolve, reject) {
-        fetcher.load(folder).then(function () {
-          const promises = kb.each(folder, ns.ldp('contains')).map(file => {
-            if (kb.holds(file, ns.rdf('type'), ns.ldp('BasicContainer'))) {
-              return deleteRecursive(kb, file)
-            } else {
-              console.log('deleteRecursive leaf file: ' + file)
-              return fetcher.webOperation('DELETE', (file).uri)
-            }
-          })
-          Promise.all(promises).then(
-            () => {
-              console.log('deleteRecursive empty folder: ' + folder)
-              fetcher
-                .webOperation('DELETE', folder.uri)
-                .then(() => {
-                  console.log('Deleted Ok: ' + folder)
-                  resolve(undefined)
-                })
-                .catch((err) => {
-                  const str = 'Unable to delete ' + folder + ': ' + err
-                  console.log(str)
-                  reject(new Error(str))
-                })
-              resolve(undefined)
-            },
-            err => {
-              alert(err)
-              reject(err)
-            }
-          )
-        })
-      })
+    function showMessage (title, message) {
+      const dialog = dom.createElement('solid-panes-resource-action-dialog')
+      dialog.title = title
+      dialog.message = message
+      dialog.confirmation = false
+      dialog.open()
+      dom.body?.appendChild(dialog)
+    }
+
+    function confirmDeletion (message) {
+      const dialog = dom.createElement('solid-panes-resource-action-dialog')
+      dialog.title = 'Delete resource'
+      dialog.message = message
+      dialog.confirmation = true
+      const result = dialog.open()
+      dom.body?.appendChild(dialog)
+      return result
     }
 
     const isDocument = subject.uri && !subject.uri.includes('#')
@@ -93,41 +71,51 @@ const pane = {
         store.holds(subject, ns.rdf('type'), ns.ldp('Container'))
       const noun = isFolder ? 'folder' : 'file'
       if (!isProtectedUri(subject)) {
-        console.log(subject)
-        const deleteButton = widgets.deleteButtonWithCheck(
+        let deletionPending = false
+        const deleteButton = widgets.button(
           dom,
-          deleteCell,
-          noun,
-          function () {
-            if (
-              !confirm(
-                `Are you sure you want to delete ${subject}? This cannot be undone.`
-              )
-            ) {
-              return
-            }
-            // @@ TODO Remove casing of store.fetcher
-            if (!store.fetcher) {
-              throw new Error('Store has no fetcher')
-            }
-            const promise = isFolder
-              ? (deleteRecursive(store, subject) || Promise.resolve())
-              : store.fetcher.webOperation('DELETE', subject.uri) || Promise.resolve()
-            promise
-              .then(() => {
-                const str = 'Deleted: ' + subject
-                console.log(str)
-              })
-              .catch((err) => {
-                const str = 'Unable to delete ' + subject + ': ' + err
-                console.log(str)
-                alert(str)
+          icons.iconBase + 'noun_2188_red.svg',
+          'Remove this ' + noun,
+          () => {
+            if (deletionPending) return
+            const resourceLabel = utils.label(subject) || subject.value
+            const deleteMessage = isFolder
+              ? `Are you sure you want to delete "${resourceLabel}" and all its contents?\nThis can't be undone.`
+              : `Are you sure you want to delete "${resourceLabel}"?\nThis can't be undone.`
+            return confirmDeletion(deleteMessage)
+              .then(confirmed => {
+                if (!confirmed) return
+                deletionPending = true
+                deleteButton.disabled = true
+                const resourceLogic = context.session.logic?.resource || solidLogicSingleton.resource
+                return resourceLogic.recursiveDelete(subject)
+                  .then(() => {
+                    const confirmDeleteMessage = isFolder
+                      ? `Deleted "${resourceLabel}" and all of its contents.`
+                      : `Deleted "${resourceLabel}".`
+                    console.log(confirmDeleteMessage)
+                    showMessage('Resource deleted', confirmDeleteMessage)
+                    dom.dispatchEvent(new CustomEvent('solid-resource-deleted', {
+                      detail: { resource: subject }
+                    }))
+                  })
+                  .catch((err) => {
+                    const str = 'Unable to delete ' + subject + ': ' + (err instanceof Error ? err.message : String(err))
+                    console.log(str)
+                    showMessage('Unable to delete resource', str)
+                  })
+                  .finally(() => {
+                    deletionPending = false
+                    deleteButton.disabled = false
+                  })
               })
           }
         )
 
-        deleteButton.removeAttribute('class') // Remove hover hide
         deleteButton.classList.add('internalPaneDeleteButton')
+        deleteButton.style.backgroundColor = 'transparent'
+        deleteButton.style.border = 'none'
+        deleteButton.style.padding = '0'
         deleteCell.appendChild(deleteButton)
       }
 
@@ -153,12 +141,13 @@ const pane = {
             str = 'Error refreshing: ' + subject + ': ' + errm
           }
           console.log(str)
-          alert(str)
+          showMessage(ok ? 'Resource refreshed' : 'Unable to refresh resource', str)
         })
       })
     }
 
-    let plist = store.statementsMatching(subject)
+    // rdflib returns its live subject index; display-only statements must not enter it.
+    let plist = store.statementsMatching(subject).slice()
     let docURI = ''
     if (!store.fetcher) {
       throw new Error('Store has no fetcher')
@@ -169,7 +158,7 @@ const pane = {
         st(
           subject,
           sym('http://www.w3.org/2007/ont/link#uri'),
-          subject.uri, // @@ TODO Remove casting
+          sym(subject.uri),
           store.fetcher.appNode
         )
       )
@@ -179,7 +168,7 @@ const pane = {
           st(
             subject,
             sym('http://www.w3.org/2007/ont/link#documentURI'),
-            subject.uri.split('#')[0], // @@ TODO Remove casting
+            sym(subject.uri.split('#')[0]),
             store.fetcher.appNode
           )
         )

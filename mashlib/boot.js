@@ -31,7 +31,7 @@ document.body.insertAdjacentHTML('beforeend', `
     <div class="app-main" tabindex="-1" aria-live="polite">
       <div class="app-shell">
         <main id="MainContent" class="app-view">
-          <table id="OutlineView" class="outline-view" aria-label="Resource browser"></table>
+          <div id="OutlineView" class="outline-view" aria-label="Resource browser"></div>
         </main>
       </div>
     </div>

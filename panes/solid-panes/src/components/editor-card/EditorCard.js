@@ -7,6 +7,8 @@ export default class EditorCard extends WebComponent {
   static properties = {
     contentType: {},
     content: {},
+    accessibilityLabel: {},
+    accessibilityDescription: {},
   }
 
   get _editorMount () {
@@ -40,7 +42,17 @@ export default class EditorCard extends WebComponent {
       const { CodeEditor } = await import('solid-ui')
       this._editor = new CodeEditor()
       try {
-        await this._editor.initialize(editorDiv, this.content ?? '', this.contentType ?? '', 'dark')
+        await this._editor.initialize(
+          editorDiv,
+          this.content ?? '',
+          this.contentType ?? '',
+          'dark',
+          undefined,
+          {
+            label: this.accessibilityLabel,
+            description: this.accessibilityDescription
+          }
+        )
       } catch (err) {
         throw new Error(`Error initializing code editor: ${err instanceof Error ? err.message : String(err)}`)
       }

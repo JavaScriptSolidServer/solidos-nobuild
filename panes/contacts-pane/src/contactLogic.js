@@ -1,5 +1,6 @@
 import * as UI from 'solid-ui'
 import * as $rdf from 'rdflib'
+import { NamedNode, Statement } from 'rdflib'
 import { store } from 'solid-logic'
 import { getPersonas } from './webidControl.js'
 import * as debug from './debug.js'
@@ -19,8 +20,8 @@ export async function updateMany (deletions, insertions = []) {
     if (!uniqueDocs.find(uniqueDoc => uniqueDoc.equals(doc))) uniqueDocs.push(doc)
   })
   const updates = uniqueDocs.map(doc =>
-    kb.updater.update(deletions.filter(st => st.why.sameTerm(doc)),
-      insertions.filter(st => st.why.sameTerm(doc))))
+    kb.updater.update(deletions.filter(st => (st.why).sameTerm(doc)),
+      insertions.filter(st => (st.why).sameTerm(doc))))
   return Promise.all(updates)
 }
 
@@ -149,7 +150,7 @@ export async function addPersonToGroup (thing, group) {
     alertDialog('You are trying to add something else than an individual or organization.')
     return
   }
-  let pname = kb.any(thing, ns.vcard('fn'))
+  const pname = kb.any(thing, ns.vcard('fn'))
   const gname = kb.any(group, ns.vcard('fn'))
   if (!pname) {
     debug.warn('Thing ' + thing + ' has no vcard:fn')
@@ -158,7 +159,6 @@ export async function addPersonToGroup (thing, group) {
   }
   const already = kb.holds(thing, ns.vcard('fn'), null, group.doc())
   if (already) {
-    if (pname === '') pname = 'Contact'
     alertDialog(pname + ' already exists in group ' + gname + '.')
     return
   }
@@ -196,7 +196,7 @@ export async function addPersonToGroup (thing, group) {
 export function groupMembers (kb, group) {
   const a = kb.each(group, ns.vcard('hasMember'), null, group.doc())
   let b = []
-  a.forEach(item => {
+  a.forEach((item) => {
     /* const contacts = kb.each(item, ns.owl('sameAs'), null, group.doc())
     if (contacts.length) {
       if (!kb.any(contacts[0], ns.vard('fn'))) b = b.concat(item) // this is the old data model
@@ -214,10 +214,8 @@ export function groupMembers (kb, group) {
 }
 
 export function isLocal (group, item) {
-  const tree = group.dir().dir().dir()
-  const local = item.uri && item.uri.startsWith(tree.uri)
-  // debug.log(`   isLocal ${local} for ${item.uri} in group ${group} tree ${tree.uri}`)
-  return local
+  const tree = group.dir()?.dir()?.dir()
+  return !!tree && !!item.uri && item.uri.startsWith(tree.uri)
 }
 
 export async function getDataModelIssues (groups) {
