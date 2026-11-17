@@ -1,3 +1,6 @@
 .shots/
 .chrome-profile/
 .chrome-bench-*/
+tools/.icon-cache/
+tools/.old-*.json
+tools/.hand-*.json

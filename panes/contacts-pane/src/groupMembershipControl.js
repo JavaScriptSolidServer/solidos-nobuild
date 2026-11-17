@@ -5,6 +5,7 @@ import { store, authn } from 'solid-logic'
 importCss(new URL('./styles/groupMembership.css', import.meta.url))
 import * as debug from './debug.js'
 import { normalizeGroupUri, confirmDialog, alertDialog } from './localUtils.js'
+import { renderDeleteButton } from './components/delete-button/index.js'
 import { refreshNames } from './addressBookPresenter.js'
 import { vcardWebIDs } from './webidControl.js'
 
@@ -13,9 +14,9 @@ const kb = store
 
 // Groups the person is a member of
 export function groupMembership (person, store = kb) {
-  let groups = store.statementsMatching(null, ns.owl('sameAs'), person).map(st => st.why)
+  let groups = store.statementsMatching(null, ns.owl('sameAs'), person).map((st) => st.why)
     .concat(store.each(null, ns.vcard('hasMember'), person))
-  const strings = new Set(groups.map(group => normalizeGroupUri(group.uri))) // remove dups with normalized URIs
+  const strings = new Set(groups.map((group) => normalizeGroupUri(group.uri))) // remove dups with normalized URIs
   groups = [...strings].map(uri => store.sym(uri))
   return groups
 }
@@ -46,10 +47,10 @@ export async function renderGroupMemberships (person, context, ulPeople) {
     const thingwebids = kb.each(null, ns.owl('sameAs'), person, group.doc())
     // WebID can be deleted only if not used in another thing
     let webids = []
-    thingwebids.forEach(webid => {
+    thingwebids.forEach((webid) => {
       if (kb.statementsMatching(webid, ns.owl('sameAs'), person, group.doc())) webids = webids.concat(webid)
     })
-    webids = vcardWebIDs(kb, person).map(webid => webid.value)
+    webids = vcardWebIDs(kb, person).map((webid) => webid.value)
     // When checking how many groups this entity belongs to we should look
     // at the person **and** any of their webID nodes.  Build an array of
     // named nodes so we can query all of them.
@@ -118,15 +119,18 @@ export async function renderGroupMemberships (person, context, ulPeople) {
 
     if (authn.currentUser()) {
       // Delete button
-      UI.widgets.deleteButtonWithCheck(
+      renderDeleteButton(
         dom,
         toolbar,
         'membership in ' + label,
-        async function () {
+        async () => {
           // async operation handles its own refresh once the group doc has
           // been reloaded
           await removeFromGroup(person, group)
-        }
+        },
+        // removeFromGroup checks the contact would still belong to a group and
+        // asks for confirmation itself, naming both the contact and the group.
+        { confirm: false }
       )
     }
 
@@ -155,7 +159,7 @@ export async function renderGroupMemberships (person, context, ulPeople) {
       pillsWrapper.innerHTML = ''
     }
 
-    groups.forEach(group => {
+    groups.forEach((group) => {
       pillsWrapper.appendChild(createGroupItem(group))
     })
   }

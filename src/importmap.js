@@ -71,6 +71,8 @@ script.textContent = JSON.stringify({
 
     lit: 'https://cdn.jsdelivr.net/npm/lit@3.3.1/+esm',
     'lit/decorators.js': 'https://cdn.jsdelivr.net/npm/lit@3.3.1/decorators.js/+esm', // a published pane build still uses them
+    // directives: local copies that import the shared lit-html (see vendor/lit-html/README.md)
+    ...Object.fromEntries(['keyed', 'ref', 'repeat'].map(d => [`lit/directives/${d}.js`, here(`./vendor/lit-html/directives/${d}.js`)])),
     '@lit/context': 'https://cdn.jsdelivr.net/npm/@lit/context@1.1.6/+esm',
     '@lit/task': 'https://cdn.jsdelivr.net/npm/@lit/task@1.0.3/+esm',
     'solid-logic': 'https://cdn.jsdelivr.net/npm/solid-logic@6.2.0/+esm',

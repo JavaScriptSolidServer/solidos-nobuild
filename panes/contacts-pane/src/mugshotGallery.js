@@ -2,6 +2,7 @@ import { importCss } from './importCss.js'
 import * as UI from 'solid-ui'
 import { store } from 'solid-logic'
 import * as $rdf from 'rdflib'
+
 importCss(new URL('./styles/mugshotGallery.css', import.meta.url))
 import * as debug from './debug.js'
 import { confirmDialog, alertDialog } from './localUtils.js'
@@ -23,9 +24,9 @@ const mimeMap = {
 }
 const extMap = Object.fromEntries(Object.entries(mimeMap).map(([k, v]) => [v, k]))
 const mime = {
-  extension: (contentType) => mimeMap[contentType] || false,
+  extension: (contentType) => (mimeMap)[contentType] || false,
   lookup: (filename) => {
-    const ext = filename.split('.').pop().toLowerCase()
+    const ext = filename.split('.').pop()?.toLowerCase() ?? ''
     return extMap[ext] || false
   }
 }
@@ -62,7 +63,7 @@ export function renderMugshotGallery (dom, subject) {
   }
 
   function handleDroppedThing (thing) {
-    kb.fetcher.nowOrWhenFetched(thing.doc(), function (ok, mess) {
+    kb.fetcher.nowOrWhenFetched(thing.doc(), (ok, mess) => {
       if (!ok) {
         debug.error('Error looking up dropped thing ' + thing + '. Stack: ' + mess)
       } else {
@@ -113,10 +114,10 @@ export function renderMugshotGallery (dom, subject) {
     )
     kb.fetcher
       .webOperation('PUT', pic.uri, {
-        data,
+        data: data,
         contentType
       })
-      .then(function (response) {
+      .then((response) => {
         if (!response.ok) {
           debug.error('Upload of ' + pic + ' failed: ' + response.status + ' ' + response.statusText)
           localComplain('Error uploading picture. If the problem persists, contact admin.')
@@ -127,12 +128,12 @@ export function renderMugshotGallery (dom, subject) {
         kb.fetcher
           .putBack(subject.doc(), { contentType: 'text/turtle' })
           .then(
-            function (_response) {
+            (_response) => {
               if (isImage) {
                 mugshotDiv.refresh()
               }
             },
-            function (err) {
+            (err) => {
               debug.error(' Write back image link FAIL ' + pic + '. Stack: ' + err)
             }
           )
@@ -150,7 +151,7 @@ export function renderMugshotGallery (dom, subject) {
         if (u.startsWith('http:')) { // because of browser mixed content stuff can't read http:
           thing = $rdf.sym('https:' + u.slice(5))
         }
-        const options = { withCredentials: false, credentials: 'omit' }
+        const options = { withCredentials: false, credentials: 'omit'}
         let result
         try {
           result = await kb.fetcher.webOperation('GET', thing.uri, options)
@@ -159,7 +160,7 @@ export function renderMugshotGallery (dom, subject) {
           handleDroppedThing(thing)
           return
         }
-        const contentType = result.headers.get('Content-Type')
+        const contentType = result.headers.get('Content-Type') ?? 'application/octet-stream'
         let pathEnd = thing.uri.split('/').slice(-1)[0] // last segment as putative filename
         pathEnd = pathEnd.split('?')[0] // chop off any query params
         const data = await result.arrayBuffer()
@@ -189,22 +190,19 @@ export function renderMugshotGallery (dom, subject) {
           ' size: ' +
           f.size +
           ' bytes, last modified: ' +
-          (f.lastModifiedDate
-            ? f.lastModifiedDate.toLocaleDateString()
+          ((f).lastModifiedDate
+            ? (f).lastModifiedDate.toLocaleDateString()
             : 'n/a')
       ) // See e.g. https://www.html5rocks.com/en/tutorials/file/dndfiles/
 
       // @@ Add: progress bar(s)
+      // (`f` is block-scoped, so no closure trick is needed to capture it.)
       const reader = new FileReader()
-      reader.onload = (function (theFile) {
-        return function (e) {
-          const data = e.target.result
-          debug.log(' File read byteLength : ' + data.byteLength)
-          const filename = encodeURIComponent(theFile.name)
-          const contentType = theFile.type
-          uploadFileToContact(filename, contentType, data)
-        }
-      })(f)
+      reader.onload = (e) => {
+        const data = e.target.result
+        debug.log(' File read byteLength : ' + data.byteLength)
+        uploadFileToContact(encodeURIComponent(f.name), f.type, data)
+      }
       reader.readAsArrayBuffer(f)
     }
   }
@@ -222,10 +220,8 @@ export function renderMugshotGallery (dom, subject) {
       // img.setAttribute('src', image.uri) use token and works with NSS but not with CSS
       // we need to get image with authenticated fetch
       store.fetcher._fetch(image.uri)
-        .then(function (response) {
-          return response.blob()
-        })
-        .then(function (myBlob) {
+        .then((response) => response.blob())
+        .then((myBlob) => {
           const objectURL = URL.createObjectURL(myBlob)
           img.setAttribute('src', objectURL)
         })
@@ -272,8 +268,7 @@ export function renderMugshotGallery (dom, subject) {
       { 'aria-label': 'Delete picture - drag picture here' }
     )
     async function droppedURIHandler (uris) {
-      const images = kb
-        .each(subject, ns.vcard('hasPhoto'))
+      const images = (kb.each(subject, ns.vcard('hasPhoto')))
         .map(x => x.uri)
       for (const uri of uris) {
         if (!images.includes(uri)) {

@@ -1,5 +1,6 @@
 import { loadSheet } from '../../loadSheet.js'
 import { ContextConsumer } from '@lit/context'
+
 import { html, nothing } from 'lit'
 import { consume } from '@lit/context'
 import { customElement, WebComponent, ns, DialogTrait, dialogContext, DEFAULT_DIALOG_CONTEXT } from 'solid-ui'
@@ -10,8 +11,8 @@ import 'solid-ui/components/dialog-content'
 import 'solid-ui/components/dialog-footer'
 import 'solid-ui/components/dialog'
 import 'solid-ui/components/input'
-import 'solid-ui/components/select-option'
-import 'solid-ui/components/select'
+import 'solid-ui/components/combobox-option'
+import 'solid-ui/components/combobox'
 
 const styles = await loadSheet(new URL('./AddContactModal.styles.css', import.meta.url))
 
@@ -66,7 +67,7 @@ export default class AddContactModal extends WebComponent {
 
   render () {
     if (!this.book || !this.selectedGroups) {
-      throw new Error('Book and selectedGroups are required for <solid-contacts-pane-add-contact-modal>')
+      throw new Error('Book and selectedGroups are required for <contacts-pane-add-contact-modal>')
     }
 
     return html`
@@ -74,19 +75,20 @@ export default class AddContactModal extends WebComponent {
         <form @submit=${this.onSubmit}>
           <solid-ui-dialog-content>
             <p>The new contact is added to the already selected group.</p>
-            <solid-ui-select
+            <solid-ui-combobox
+              select-only
               name="type"
               label="Contact type"
               .value=${this.contactType}
-              @input=${this.onContactTypeChanged}
+              @change=${this.onContactTypeChanged}
             >
               ${CONTACT_TYPES.map(
                 (type) =>
-                  html`<solid-ui-select-option .value=${type.value}
-                    >${type.label}</solid-ui-select-option
+                  html`<solid-ui-combobox-option value=${type.value}
+                    >${type.label}</solid-ui-combobox-option
                   >`
               )}
-            </solid-ui-select>
+            </solid-ui-combobox>
             <solid-ui-input
               required
               name="name"
@@ -123,6 +125,9 @@ export default class AddContactModal extends WebComponent {
     this.loading = true
 
     try {
+      if (!this.book || !this.selectedGroups) {
+        throw new Error('Book and selectedGroups are required for <contacts-pane-add-contact-modal>')
+      }
       const person = await saveNewContact(
         this.book,
         this.name,
@@ -143,4 +148,4 @@ export default class AddContactModal extends WebComponent {
   }
 }
 
-if (!customElements.get('solid-contacts-pane-add-contact-modal')) customElements.define('solid-contacts-pane-add-contact-modal', AddContactModal)
+if (!customElements.get('contacts-pane-add-contact-modal')) customElements.define('contacts-pane-add-contact-modal', AddContactModal)

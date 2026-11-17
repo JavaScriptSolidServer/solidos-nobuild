@@ -3,7 +3,6 @@ import { ns } from 'solid-ui'
 import { LiveStore, NamedNode, parse } from 'rdflib'
 import { isWebIdUri } from './webIdUtils.js'
 import { ACL_LINK } from 'solid-logic'
-// (type-only import removed: FileExplorerResourceMetadata from '../components/file-explorer-header/types.js')
 
 function parseWacAllowHeader (headerValue) {
   const permissions = new Map()
@@ -44,8 +43,8 @@ export async function getPodStorages (url) {
       console.warn('Unable to load profile document for WebID', url.doc().uri, err)
     }
     const podStorages = store.each(url, ns.space('storage'))
-    const results = await Promise.all(podStorages.map(async pod => await isPodStorage(pod) ? pod : null))
-    return results.filter(pod => pod !== null)
+    // A WebID's pim:storage assertion is authoritative; not every server serializes space:Storage on its root container.
+    return podStorages.filter((pod) => pod.termType === 'NamedNode')
   }
   try {
     const storage = await findPodStorageFromUrl(url)

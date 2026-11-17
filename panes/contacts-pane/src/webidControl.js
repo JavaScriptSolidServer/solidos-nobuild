@@ -5,6 +5,8 @@ import * as UI from 'solid-ui'
 import { store } from 'solid-logic'
 import { updateMany } from './contactLogic.js'
 import * as $rdf from 'rdflib'
+import { NamedNode, Statement } from 'rdflib'
+
 importCss(new URL('./styles/webidControl.css', import.meta.url))
 import * as debug from './debug.js'
 
@@ -36,8 +38,7 @@ export async function addWebIDToContacts (person, webid, urlType, kb) {
 
   // check this is a url
   try {
-    // eslint-disable-next-line no-unused-vars
-    const _url = new URL(webid)
+    new URL(webid) // eslint-disable-line no-new -- throws when invalid
   } catch (error) {
     throw new Error(`${WEBID_NOUN}: ${webid} is not a valid url.`)
   }
@@ -55,7 +56,7 @@ export async function addWebIDToContacts (person, webid, urlType, kb) {
   // insert owl:sameAs
   const groups = kb.each(null, ns.vcard('hasMember'), person)
   let deletables = []
-  groups.forEach(group => {
+  groups.forEach((group) => {
     deletables = deletables.concat(kb.statementsMatching(group, ns.vcard('hasMember'), person, group.doc()))
     insertables.push($rdf.st(group, ns.vcard('hasMember'), kb.sym(webid), group.doc())) // May exist; do we need to check?
     insertables.push($rdf.st(kb.sym(webid), ns.owl('sameAs'), person, group.doc()))
@@ -70,8 +71,8 @@ export async function removeWebIDFromContacts (person, webid, urlType, kb) {
 
   // remove webID from card
   const existing = kb.each(person, ns.vcard('url'), null, person.doc())
-    .filter(urlObject => kb.holds(urlObject, ns.rdf('type'), urlType, person.doc()))
-    .filter(urlObject => kb.holds(urlObject, ns.vcard('value'), webid, person.doc()))
+    .filter((urlObject) => kb.holds(urlObject, ns.rdf('type'), urlType, person.doc()))
+    .filter((urlObject) => kb.holds(urlObject, ns.vcard('value'), webid, person.doc()))
   if (!existing.length) {
     throw new Error(`Person ${person} does not have ${WEBID_NOUN} ${webid}.`)
   }
@@ -87,13 +88,13 @@ export async function removeWebIDFromContacts (person, webid, urlType, kb) {
   const groups = kb.each(null, ns.vcard('hasMember'), kb.sym(webid))
   let removeFromGroups = []
   const insertInGroups = []
-  groups.forEach(async group => {
+  for (const group of groups) {
     removeFromGroups = removeFromGroups.concat(kb.statementsMatching(kb.sym(webid), ns.owl('sameAs'), person, group.doc()))
     insertInGroups.push($rdf.st(group, ns.vcard('hasMember'), person, group.doc()))
     if (kb.statementsMatching(kb.sym(webid), ns.owl('sameAs'), null, group.doc()).length < 2) {
       removeFromGroups = removeFromGroups.concat(kb.statementsMatching(group, ns.vcard('hasMember'), kb.sym(webid), group.doc()))
     }
-  })
+  }
   await updateMany(removeFromGroups, insertInGroups)
 }
 
@@ -111,13 +112,13 @@ function getSameAs (kb, thing, doc) { // Should this recurse?
     const node = kb.sym(uri)
     kb.each(node, ns.owl('sameAs'), null, doc)
       .concat(kb.each(null, ns.owl('sameAs'), node, doc))
-      .forEach(next => {
+      .forEach((next) => {
         debug.log('        OWL sameAs found ' + next)
         agenda.add(next.uri)
       })
     kb.each(node, ns.schema('sameAs'), null, doc)
       .concat(kb.each(null, ns.schema('sameAs'), node, doc))
-      .forEach(next => {
+      .forEach((next) => {
         debug.log('        Schema sameAs found ' + next)
         agenda.add(next.uri)
       })
@@ -129,7 +130,7 @@ function getSameAs (kb, thing, doc) { // Should this recurse?
 // find person webIDs
 export function getPersonas (kb, person) {
   const lits = vcardWebIDs(kb, person).concat(getSameAs(kb, person, person.doc()))
-  const strings = new Set(lits.map(lit => lit.value)) // remove dups
+  const strings = new Set(lits.map((lit) => lit.value)) // remove dups
   const personas = [...strings].map(uri => kb.sym(uri)) // The UI tables do better with Named Nodes than Literals
   personas.sort() // for repeatability
   personas.filter(x => !x.sameTerm(person))
@@ -138,9 +139,9 @@ export function getPersonas (kb, person) {
 
 export function vcardWebIDs (kb, person, urlType) {
   return kb.each(person, ns.vcard('url'), null, person.doc())
-    .filter(urlObject => kb.holds(urlObject, ns.rdf('type'), urlType, person.doc()))
-    .map(urlObject => kb.any(urlObject, ns.vcard('value'), null, person.doc()))
-    .filter(x => !!x) // remove nulls
+    .filter((urlObject) => kb.holds(urlObject, ns.rdf('type'), urlType, person.doc()))
+    .map((urlObject) => kb.any(urlObject, ns.vcard('value'), null, person.doc()))
+    .filter((x) => !!x) // remove nulls
 }
 
 export function isOrganization (agent) {
@@ -250,7 +251,7 @@ export async function renderIdControl (person, dataBrowserContext, options) {
     openButton.setAttribute('aria-label', 'Collapse profile')
     const paneName = isOrganization(person) || isOrganization(persona) ? 'profile' : 'profile' // was default for org
 
-    widgets.publicData.loadPublicDataThing(kb, person, persona).then(_resp => {
+    widgets.publicData.loadPublicDataThing(kb, person, persona).then((_resp) => {
     // loadPublicDataThing(kb, person, persona).then(_resp => {
       try {
         main = renderNamedPane(dom, persona, paneName, dataBrowserContext)
@@ -262,7 +263,7 @@ export async function renderIdControl (person, dataBrowserContext, options) {
         main = widgets.errorMessageBlock(dom, 'Error displaying profile. If it persists, contact admin.')
         mainCell.appendChild(main)
       }
-    }, err => {
+    }, (err) => {
       debug.error('Error loading persona ' + persona + '. Stack: ' + err)
       main = widgets.errorMessageBlock(dom, 'Error loading profile. If it persists, contact admin.')
       mainCell.appendChild(main)
@@ -272,7 +273,7 @@ export async function renderIdControl (person, dataBrowserContext, options) {
 
   async function refreshWebIDTable () {
     const personas = getPersonas(kb, person)
-    utils.syncTableToArrayReOrdered(profileArea, personas, persona => renderPersona(dom, persona, kb))
+    utils.syncTableToArrayReOrdered(profileArea, personas, (persona) => renderPersona(dom, persona, kb))
   }
   async function addOneIdAndRefresh (person, webid) {
     try {

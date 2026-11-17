@@ -60,6 +60,9 @@ export const n3Pane = {
     const source = myDocument.createElement('solid-panes-editor-card')
     source.contentType = 'text/n3'
     source.content = serializedContent
+    source.accessibilityLabel = `Generated N3 for ${subject.uri}`
+    source.accessibilityDescription =
+      'Generated N3 serialization. This content is read-only.'
 
     div.appendChild(source)
     return div

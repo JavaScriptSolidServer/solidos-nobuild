@@ -1,6 +1,5 @@
 import { ContextProvider } from '@lit/context'
 import { html } from 'lit-html'
-import { provide } from '@lit/context'
 import WebComponent from '../../lib/WebComponent.js'
 // (type-only import removed: DataBrowserContext, PaneDefinition from 'pane-registry')
 import { fileExplorerContext } from '../../lib/file-explorer/context.js'
@@ -12,12 +11,17 @@ export default class FileExplorerProvider extends WebComponent {
     pane: { attribute: false },
     relevantPanes: { attribute: false },
     soloPane: { attribute: false },
+    editor: { state: true },
+    isDirty: { state: true },
   }
 
   constructor () {
     super()
     this.__valueProvider = new ContextProvider(this, { context: fileExplorerContext })
     this.relevantPanes = []
+    // Defaults go in the constructor, not class fields: fields would shadow Lit's accessors.
+    this.editor = undefined
+    this.isDirty = false
   }
 
   get value () {
@@ -28,9 +32,6 @@ export default class FileExplorerProvider extends WebComponent {
     this.__valueProvider.setValue(value)
     this.__value = value
   }
-
-  @state() accessor editor
-  @state() accessor isDirty = false
 
   registerEditor = (editor) => {
     this.editor = editor

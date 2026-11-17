@@ -730,11 +730,24 @@ if (usedIcons.size) {
 
     // app/* are upstream's own assets (src/assets/icons), not on Iconify: defined by hand in lib/icons.js.
     if (set === 'app') continue
-    const response = await fetch(`https://api.iconify.design/${set}/${icon}.svg`)
+    // Kept in tools/.icon-cache so a rerun asks Iconify for nothing it already has
+    // (Iconify answers 429 to a burst), and waits before asking again when it does.
+    const cached = join(dirname(configFile), '.icon-cache', `${set}-${icon}.svg`)
+    let text = existsSync(cached) ? readFileSync(cached, 'utf8') : null
 
-    if (!response.ok) throw new Error(`icon ${id}: ${response.status}`)
+    for (let attempt = 0; text === null; attempt++) {
+      const response = await fetch(`https://api.iconify.design/${set}/${icon}.svg`)
 
-    const svg = (await response.text()).trim().replace(/ width="1em" height="1em"/, ' width="100%" height="100%"')
+      if (response.ok) {
+        text = await response.text()
+        mkdirSync(dirname(cached), { recursive: true })
+        writeFileSync(cached, text)
+      } else if (response.status === 429 && attempt < 6) {
+        await new Promise(resolve => setTimeout(resolve, 5000 * (attempt + 1)))
+      } else throw new Error(`icon ${id}: ${response.status}`)
+    }
+
+    const svg = text.trim().replace(/ width="1em" height="1em"/, ' width="100%" height="100%"')
 
     defs.push(`defineIcon('icon-${set}-${icon}', '${svg.replace(/'/g, "\\'")}')`)
   }

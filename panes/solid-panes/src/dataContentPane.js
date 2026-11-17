@@ -10,16 +10,30 @@ import { importCss } from './importCss.js'
 //         - Expand automatically all the way down
 //         - original source view?  Use ffox view source
 
-import * as UI from 'solid-ui'
-import * as $rdf from 'rdflib'
+import { icons, log, ns, utils, widgets } from 'solid-ui'
+import { Serializer } from 'rdflib'
 import DOMPurify from 'dompurify'
 
 importCss(new URL('./dataContentPane.css', import.meta.url))
 
-const ns = UI.ns
+let renderInstanceId = 0
+
+function openDataContentLink (event) {
+  const mouseEvent = event
+  if (mouseEvent.metaKey || mouseEvent.ctrlKey || mouseEvent.shiftKey || mouseEvent.altKey) return
+  const documentWithOutline = typeof document !== 'undefined'
+    ? document
+    : undefined
+  const hasOutlineManager = !!documentWithOutline?.outlineManager
+  const hasPaneOutliner = typeof window !== 'undefined' &&
+    typeof (window).panes?.getOutliner === 'function'
+  if (hasOutlineManager || hasPaneOutliner) {
+    widgets.openHrefInOutlineMode(event)
+  }
+}
 
 export const dataContentPane = {
-  icon: UI.icons.originalIconBase + 'rdf_flyer.24.gif',
+  icon: icons.originalIconBase + 'rdf_flyer.24.gif',
 
   name: 'dataContents',
 
@@ -41,31 +55,32 @@ export const dataContentPane = {
     if (n === 0) return null
     return 'Data (' + n + ')'
   },
-  /*
-  shouldGetFocus: function(subject) {
-      return store.whether(subject, UI.ns.rdf('type'), UI.ns.link('RDFDocument'))
-  },
-*/
   statementsAsTables: function statementsAsTables (
     sts,
     context,
     initialRoots
   ) {
     const myDocument = context.dom
-    // const outliner = context.getOutliner(myDocument)
     const rep = myDocument.createElement('table')
     rep.classList.add('data-content-pane__table', 'data-content-pane__table--root')
     const isMobileLayout = context.environment?.layout === 'mobile'
-    const sz = $rdf.Serializer(context.session.store)
+    const sz = Serializer(context.session.store)
     const res = sz.rootSubjects(sts)
     let roots = res.roots
     const subjects = res.subjects
     const loopBreakers = res.loopBreakers ?? {}
     for (const x in loopBreakers) {
-      console.log('\tdataContentPane: loopbreaker:' + x)
+      log.debug('\tdataContentPane: loopbreaker:' + x)
     }
     const doneBnodes = {}
     const referencedBnodes = {}
+    const renderId = ++renderInstanceId
+    let cellId = 0
+
+    function nextCellId (prefix) {
+      cellId++
+      return `data-content-${renderId}-${prefix}-${cellId}`
+    }
 
     function propertyTree (
       subject,
@@ -73,6 +88,7 @@ export const dataContentPane = {
     ) {
       const rep = myDocument.createElement('table')
       rep.classList.add('data-content-pane__table', 'data-content-pane__table--property')
+      rep.setAttribute('aria-label', 'Properties')
       let lastPred = null
       const subjectStatements = subjects[sz.toStr(subject)]
       if (!subjectStatements) {
@@ -90,18 +106,16 @@ export const dataContentPane = {
           if (!isMobileLayout && lastPred && same > 1) {
             predicateTD?.setAttribute('rowspan', '' + same)
           }
-          predicateTD = myDocument.createElement('td')
+          predicateTD = myDocument.createElement('th')
           predicateTD.setAttribute('class', 'data-content-pane__predicate-cell')
+          predicateTD.setAttribute('scope', 'row')
+          predicateTD.id = nextCellId('predicate')
           const anchor = myDocument.createElement('a')
           anchor.setAttribute('href', st.predicate.uri)
-          anchor.addEventListener(
-            'click',
-            UI.widgets.openHrefInOutlineMode,
-            true
-          )
+          anchor.addEventListener('click', openDataContentLink, true)
           anchor.appendChild(
             myDocument.createTextNode(
-              UI.utils.predicateLabelForXML(st.predicate)
+              utils.predicateLabelForXML(st.predicate)
             )
           )
           predicateTD.appendChild(anchor)
@@ -112,6 +126,7 @@ export const dataContentPane = {
         same++
         const objectTD = myDocument.createElement('td')
         objectTD.classList.add('data-content-pane__value-cell')
+        objectTD.setAttribute('headers', predicateTD?.id ?? '')
         objectTD.appendChild(objectTree(st.object, nestingLevel + 1))
         tr.appendChild(objectTD)
         rep.appendChild(tr)
@@ -129,19 +144,16 @@ export const dataContentPane = {
         case 'NamedNode':
           anchor = myDocument.createElement('a')
           anchor.setAttribute('href', obj.uri)
-          anchor.addEventListener(
-            'click',
-            UI.widgets.openHrefInOutlineMode,
-            true
-          )
-          anchor.appendChild(myDocument.createTextNode(UI.utils.label(obj)))
+          anchor.addEventListener('click', openDataContentLink, true)
+          anchor.appendChild(myDocument.createTextNode(utils.label(obj)))
           return anchor
 
         case 'Literal':
-          if (!obj.datatype || !obj.datatype.uri) {
+          if (obj.language || !obj.datatype || !obj.datatype.uri) {
             res = myDocument.createElement('div')
             res.classList.add('data-content-pane__literal')
             res.textContent = obj.value
+            if (obj.language) res.setAttribute('lang', obj.language)
             return res
           } else if (
             obj.datatype.uri ===
@@ -149,6 +161,8 @@ export const dataContentPane = {
           ) {
             res = myDocument.createElement('div')
             res.classList.add('embeddedXHTML')
+            res.setAttribute('role', 'group')
+            res.setAttribute('aria-label', 'Embedded HTML content')
             res.innerHTML = DOMPurify.sanitize(obj.value)
             return res
           }
@@ -160,6 +174,10 @@ export const dataContentPane = {
             const referenceAnchor = myDocument.createElement('a')
             referenceAnchor.setAttribute('href', '#' + obj.toNT().slice(2))
             referenceAnchor.setAttribute('class', 'bnodeRef')
+            referenceAnchor.setAttribute(
+              'aria-label',
+              `Referenced blank node ${obj.toNT().slice(3)}`
+            )
             referenceAnchor.textContent = '*' + obj.toNT().slice(3)
             return referenceAnchor
           }
@@ -175,12 +193,12 @@ export const dataContentPane = {
         }
 
         case 'Collection':
-          res = myDocument.createElement('table')
+          res = myDocument.createElement('ol')
           res.setAttribute('class', 'collectionAsTables')
           for (let i = 0; i < obj.elements.length; i++) {
-            const tr = myDocument.createElement('tr')
-            res.appendChild(tr)
-            tr.appendChild(objectTree(obj.elements[i], nestingLevel + 1))
+            const item = myDocument.createElement('li')
+            item.appendChild(objectTree(obj.elements[i], nestingLevel + 1))
+            res.appendChild(item)
           }
           return res
 
@@ -188,7 +206,7 @@ export const dataContentPane = {
           res = (context.session.paneRegistry
             .byName('dataContents'))
             .statementsAsTables(obj.statements, context)
-          res.setAttribute('class', 'data-content-pane__nested-formula')
+          res.classList.add('data-content-pane__nested-formula')
           return res
 
         case 'Variable':
@@ -214,15 +232,18 @@ export const dataContentPane = {
         'data-content-pane__row--root'
       )
       rep.appendChild(tr)
-      const subjectTD = myDocument.createElement('td')
+      const subjectTD = myDocument.createElement('th')
       subjectTD.classList.add('data-content-pane__subject-cell')
+      subjectTD.setAttribute('scope', 'row')
+      subjectTD.id = nextCellId('subject')
       tr.appendChild(subjectTD)
       const TDTree = myDocument.createElement('td')
       TDTree.classList.add('data-content-pane__details-cell')
+      TDTree.setAttribute('headers', subjectTD.id)
       tr.appendChild(TDTree)
       const root = roots[i]
       if (root.termType === 'BlankNode') {
-        subjectTD.appendChild(myDocument.createTextNode(UI.utils.label(root)))
+        subjectTD.appendChild(myDocument.createTextNode(utils.label(root)))
       } else {
         subjectTD.appendChild(objectTree(root, 0))
       }
@@ -231,11 +252,15 @@ export const dataContentPane = {
     for (const bNT in referencedBnodes) {
       const table = doneBnodes[bNT]
       if (table === true) continue
+      const caption = myDocument.createElement('caption')
       const anchor = myDocument.createElement('a')
       anchor.setAttribute('id', bNT.slice(2))
+      anchor.setAttribute('tabindex', '-1')
       anchor.setAttribute('class', 'bnodeDef')
+      anchor.setAttribute('aria-label', `Blank node ${bNT.slice(3)}`)
       anchor.textContent = bNT.slice(3) + ')'
-      table.insertBefore(anchor, table.firstChild)
+      caption.appendChild(anchor)
+      table.insertBefore(caption, table.firstChild)
     }
     return rep
   },
@@ -260,16 +285,16 @@ export const dataContentPane = {
       if (kb.holds(subject, undefined, undefined, subject)) {
         initialRoots.push(subject)
       }
-      const ps = kb.any(subject, UI.ns.foaf('primaryTopic'), undefined, subject)
+      const ps = kb.any(subject, ns.foaf('primaryTopic'), undefined, subject)
       if (ps && (ps.termType === 'NamedNode' || ps.termType === 'BlankNode')) {
         initialRoots.push(ps)
       }
 
-      div.appendChild(
-        context.session.paneRegistry
-          .byName('dataContents')
-          .statementsAsTables(sts, context, initialRoots)
-      )
+      const table = context.session.paneRegistry
+        .byName('dataContents')
+        .statementsAsTables(sts, context, initialRoots)
+      table.setAttribute('aria-label', `Data content for ${utils.label(subject)}`)
+      div.appendChild(table)
     }
 
     const div = myDocument.createElement('div')

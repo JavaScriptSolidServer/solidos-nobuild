@@ -35,13 +35,12 @@ export const imagePane = {
 
   label: function (subject, context) {
     const store = context.session.store
-    if (
-      !store.anyStatementMatching(
-        subject,
-        UI.ns.rdf('type'),
-        store.sym('http://purl.org/dc/terms/Image')
-      )
-    ) {
+    const isImageResource = store.anyStatementMatching(
+      subject,
+      UI.ns.rdf('type'),
+      store.sym('http://purl.org/dc/terms/Image')
+    ) || contentTypeMatch(store, subject, ['image/'])
+    if (!isImageResource) {
       // NB: Not dc: namespace!
       return null
     }
@@ -70,6 +69,10 @@ export const imagePane = {
       .then(function (myBlob) {
         const objectURL = URL.createObjectURL(myBlob)
         img.setAttribute('src', objectURL) // w640 h480 //
+      })
+      .catch(function (error) {
+        img.setAttribute('alt', 'Unable to load image')
+        UI.log.warn('Unable to load image resource: ' + error)
       })
     img.classList.add('image-pane__image')
     div.appendChild(img)

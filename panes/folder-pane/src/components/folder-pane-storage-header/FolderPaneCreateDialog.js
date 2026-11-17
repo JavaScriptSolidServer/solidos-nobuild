@@ -1,0 +1,109 @@
+import { loadSheet } from '../../loadSheet.js'
+import { DialogComponent, customElement } from 'solid-ui'
+import { html } from 'lit'
+import { getCreationDialogText } from '../../helpers.js'
+import { invalidCreationNameMessage, isSafeCreationName } from '../../creationSafety.js'
+const styles = await loadSheet(new URL('./FolderPaneCreateDialog.styles.css', import.meta.url))
+
+import 'solid-ui/components/button'
+import 'solid-ui/components/dialog'
+import 'solid-ui/components/dialog-content'
+import 'solid-ui/components/dialog-footer'
+import 'solid-ui/components/dialog-header'
+import '../../icons.js'
+
+export default class FolderPaneCreateDialog extends DialogComponent {
+  static properties = {
+    label: { attribute: false },
+    name: { state: true },
+    validationMessage: { state: true },
+  }
+
+  constructor () {
+    super()
+    this.label = null
+    this.name = ''
+    this.validationMessage = ''
+  }
+
+  get nameInput () {
+    return this.renderRoot?.querySelector('input') ?? null
+  }
+
+  static styles = styles
+
+  cancel = () => this.close()
+
+  confirm = () => {
+    const name = this.name.trim()
+
+    if (!isSafeCreationName(name)) {
+      this.validationMessage = invalidCreationNameMessage
+      return
+    }
+
+    this.close(name)
+  }
+
+  onNameInput = (event) => {
+    this.name = (event.target).value
+    this.validationMessage = ''
+  }
+
+  onNameKeydown = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      this.confirm()
+    }
+  }
+
+  firstUpdated () {
+    requestAnimationFrame(() => {
+      this.nameInput?.focus()
+      this.nameInput?.setSelectionRange(0, this.nameInput.value.length)
+    })
+  }
+
+  render () {
+    const paneLabel = this.label ?? 'Container'
+    const { title, placeholder } = getCreationDialogText(paneLabel)
+    const displayLabel = title.slice(4)
+    const fieldLabel = `${displayLabel} name`
+
+    return html`
+      <solid-ui-dialog>
+        <solid-ui-dialog-header slot="header" class="folder-pane-create-dialog-header">
+          <h1>${title}</h1>
+          <solid-ui-button variant="ghost" @click=${this.cancel} title="Close" aria-label="Close">
+            <icon-lucide-x slot="icon"></icon-lucide-x>
+          </solid-ui-button>
+        </solid-ui-dialog-header>
+        <solid-ui-dialog-content>
+          <label class="folder-pane-create-dialog-label">
+            <span>${fieldLabel}</span>
+            <input
+              type="text"
+              placeholder=${placeholder}
+              .value=${this.name}
+              @input=${this.onNameInput}
+              @keydown=${this.onNameKeydown}
+            />
+            ${this.validationMessage
+              ? html`<span class="folder-pane-create-dialog-error" role="alert">${this.validationMessage}</span>`
+              : ''}
+          </label>
+        </solid-ui-dialog-content>
+        <solid-ui-dialog-footer>
+          <solid-ui-button variant="secondary" @click=${this.cancel}>
+            Cancel
+          </solid-ui-button>
+          <solid-ui-button ?disabled=${!this.name.trim()} @click=${this.confirm}>
+            Create
+          </solid-ui-button>
+        </solid-ui-dialog-footer>
+      </solid-ui-dialog>
+    `
+  }
+}
+
+if (!customElements.get('folder-pane-create-dialog')) customElements.define('folder-pane-create-dialog', FolderPaneCreateDialog)

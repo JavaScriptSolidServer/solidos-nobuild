@@ -19,6 +19,7 @@ import { registerPanes } from './registerPanes.js'
 import { list, paneForIcon, paneForPredicate, register, byName } from 'pane-registry'
 import { createContext } from './outline/context.js'
 import { initMainPage, refreshUI } from './mainPage/index.js'
+import { isHandlingBrowserNavigation } from './navigation/browserEvents.js'
 
 function getOutliner (dom, environment) {
   if (!dom.outlineManager) {
@@ -62,12 +63,18 @@ export {
   versionInfo,
   initMainPage,
   refreshUI,
+  isHandlingBrowserNavigation,
   list, // from paneRegistry
   paneForIcon, // from paneRegistry
   paneForPredicate, // from paneRegistry
   register, // from paneRegistry
   byName // from paneRegistry
 }
+
+export {
+  initializeProfileHeading,
+  refreshProfileHeading
+} from './mainPage/profileHeading.js'
 
 // export for simpler access by non-node scripts
 if (typeof window !== 'undefined') {
