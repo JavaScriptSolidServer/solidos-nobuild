@@ -54,7 +54,8 @@ try {
 
     try {
       // Rendered: the outline has a pane body with real content.
-      await page.waitFor(`(() => { const o = document.getElementById('OutlineView'); return !!o && o.innerText.trim().length > 40 })()`, { timeout: 40000 })
+      // Text inside shadow roots counts: from solid-panes 5.1.0 the folder view is a component.
+      await page.waitFor(`(() => { const o = document.getElementById('OutlineView'); if (!o) return false; let text = o.innerText; const walk = (node) => { for (const el of node.querySelectorAll('*')) if (el.shadowRoot) { text += el.shadowRoot.textContent; walk(el.shadowRoot) } }; walk(o); return text.replace(/\\s+/g, ' ').trim().length > 40 })()`, { timeout: 40000 })
       await new Promise(resolve => setTimeout(resolve, 2500)) // let async panes finish
 
       const text = await page.evaluate(ALL_TEXT)

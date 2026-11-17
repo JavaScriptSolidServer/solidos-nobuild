@@ -71,7 +71,7 @@
     ]
   },
   "generated": {
-    "versionInfo.js": "// Upstream generates this at build time (timestamp.sh); pinned to the converted commit.\nexport default {\n  buildTime: '2026-09-29T17:51:21Z',\n  commit: '504265f',\n  npmInfo: {\n    'solid-panes': '5.0.0'\n  }\n}\n"
+    "versionInfo.js": "// Upstream generates this at build time (timestamp.sh); pinned to the converted commit.\nexport default {\n  buildTime: '2026-11-16T18:31:34Z',\n  commit: '617cc9d',\n  npmInfo: {\n    'solid-panes': '5.1.0'\n  }\n}\n"
   },
   "customMedia": {
     "file": "../../upstream-solid-ui/src/styles/breakpoints.css",

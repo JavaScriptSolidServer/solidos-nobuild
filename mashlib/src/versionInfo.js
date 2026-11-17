@@ -1,8 +1,8 @@
 // Upstream generates this at build time (timestamp.sh); pinned to the converted commit.
 export default {
-  buildTime: '2026-09-29T18:04:02Z',
-  commit: '309a1e9',
+  buildTime: '2026-11-16T18:49:47Z',
+  commit: 'df7aab3',
   npmInfo: {
-    mashlib: '3.0.0'
+    mashlib: '3.1.0'
   }
 }
