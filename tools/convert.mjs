@@ -727,6 +727,9 @@ if (usedIcons.size) {
 
   for (const id of [...usedIcons].sort()) {
     const [set, icon] = id.split('/')
+
+    // app/* are upstream's own assets (src/assets/icons), not on Iconify: defined by hand in lib/icons.js.
+    if (set === 'app') continue
     const response = await fetch(`https://api.iconify.design/${set}/${icon}.svg`)
 
     if (!response.ok) throw new Error(`icon ${id}: ${response.status}`)

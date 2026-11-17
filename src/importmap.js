@@ -1,6 +1,6 @@
 // Classic script: <script src="src/importmap.js"></script>, before any module.
 // One place for the bare-specifier → URL mapping instead of a copy per page.
-// `rdflib` and `solid-namespace` are the exact URLs solid-logic@6.0.0 imports,
+// `rdflib` and `solid-namespace` are the exact URLs solid-logic@6.2.0 imports,
 // so there is one rdflib instance across solid-logic and solid-ui.
 
 const script = document.createElement('script')
@@ -8,16 +8,18 @@ const here = (path) => new URL(path, document.currentScript.src).href
 const components = ['account', 'avatar', 'button', 'combobox', 'combobox-option', 'dialog', 'dialog-content',
   'dialog-footer', 'dialog-header', 'dialog-provider', 'dialogs-root', 'guard', 'input', 'login-button',
   'login-modal', 'logout-button', 'menu', 'menu-item', 'photo-capture', 'photo-capture-modal', 'provider',
-  'rdf-form', 'rdf-input', 'select', 'select-option', 'signup-button', 'solid-emblem']
+  'rdf-form', 'rdf-input', 'select', 'select-option', 'signup-button', 'solid-emblem',
+  // solid-ui 5.1.0
+  'access-control-modal', 'error-state', 'file-explorer-header', 'file-explorer-provider', 'resource-actions-menu']
 
 // A/B against upstream: ?published=issue-pane,contacts-pane (or, where the URL is
 // the resource itself, as on a pod: localStorage.published = 'issue-pane') maps
 // those packages to their published npm builds (esm.sh, dependencies external)
 // instead of the converted source here.
 const PUBLISHED = {
-  'solid-panes': '5.0.0',
-  'profile-pane': '4.0.0', 'folder-pane': '4.0.0', 'source-pane': '4.0.0', 'chat-pane': '4.0.0',
-  'contacts-pane': '4.0.0', 'issue-pane': '4.0.0', 'meeting-pane': '4.0.0', 'activitystreams-pane': '2.0.0',
+  'solid-panes': '5.1.0',
+  'profile-pane': '4.1.0', 'folder-pane': '4.1.0', 'source-pane': '4.1.0', 'chat-pane': '4.0.0',
+  'contacts-pane': '4.1.0', 'issue-pane': '4.1.0', 'meeting-pane': '4.1.0', 'activitystreams-pane': '2.1.0',
 }
 const storedPublished = (() => { try { return localStorage.getItem('published') } catch { return null } })()
 const published = (new URL(location.href).searchParams.get('published') ?? storedPublished ?? '').split(',').filter(p => PUBLISHED[p])
@@ -50,11 +52,11 @@ script.textContent = JSON.stringify({
     // Not converted: activitystreams-pane (React). Its published build via esm.sh
     // with every dependency external (* prefix), so solid-ui, rdflib, … resolve
     // to the single copies mapped here.
-    'activitystreams-pane': 'https://esm.sh/*activitystreams-pane@2.0.0',
+    'activitystreams-pane': 'https://esm.sh/*activitystreams-pane@2.1.0',
     ...Object.fromEntries(published.map(p => [p, `https://esm.sh/*${p}@${PUBLISHED[p]}`])),
     // Global names the webpack UMD builds of the panes required (require("SolidLogic"),
     // require("UI")); kept for any published build that still uses them.
-    SolidLogic: 'https://cdn.jsdelivr.net/npm/solid-logic@6.0.0/+esm',
+    SolidLogic: 'https://cdn.jsdelivr.net/npm/solid-logic@6.2.0/+esm',
     $rdf: 'https://cdn.jsdelivr.net/npm/rdflib@2.4.1/+esm', // mashlib's webpack aliases this too
     UI: here('./solid-ui.js'),
 
@@ -71,7 +73,7 @@ script.textContent = JSON.stringify({
     'lit/decorators.js': 'https://cdn.jsdelivr.net/npm/lit@3.3.1/decorators.js/+esm', // a published pane build still uses them
     '@lit/context': 'https://cdn.jsdelivr.net/npm/@lit/context@1.1.6/+esm',
     '@lit/task': 'https://cdn.jsdelivr.net/npm/@lit/task@1.0.3/+esm',
-    'solid-logic': 'https://cdn.jsdelivr.net/npm/solid-logic@6.0.0/+esm',
+    'solid-logic': 'https://cdn.jsdelivr.net/npm/solid-logic@6.2.0/+esm',
     rdflib: 'https://cdn.jsdelivr.net/npm/rdflib@2.4.1/+esm',
     'solid-namespace': 'https://cdn.jsdelivr.net/npm/solid-namespace@0.5.4/+esm',
     'webawesome/': 'https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@3.9.0/dist-cdn/',

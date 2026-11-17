@@ -76,5 +76,5 @@ export { default as WebComponent } from './lib/WebComponent.js'
 // lib/dialogs
 export { Dialog, ShowDialogEvent, CloseDialogEvent, showDialog, dialogContext, DEFAULT_DIALOG_CONTEXT } from './lib/dialogs.js'
 
-export * from './lib/file-explorer/context.js'
+export * from './lib/file-explorer/index.js'
 export * from './lib/code-editor/index.js'
